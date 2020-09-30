@@ -137,7 +137,7 @@ If an error is found (eg. sign is not a,s,m,d) it will return an empty string an
 Otherwise, it will return a correct format of the answer in string
 */
 string solve(char sign, Complex z1, Complex z2, bool &error) {
-    string output = "";
+    char output[100];
     float real_ans, imag_ans;
     bool div_by_zero = false;
     error = false;
@@ -159,7 +159,6 @@ string solve(char sign, Complex z1, Complex z2, bool &error) {
         }
     }
     else {
-        output = "";
         error = true;
     }
 
@@ -170,26 +169,33 @@ string solve(char sign, Complex z1, Complex z2, bool &error) {
             //Checks if NAN and formats the answer based on this
             if (isnan(real_ans) && !isnan(imag_ans)) {
                 if (imag_ans < 0) {
-                    output = "nan - j " + to_string(abs(imag_ans)) + "\n";
+                    //output = "nan - j " + to_string(abs(imag_ans)) + "\n";
+                    sprintf(output, "nan - j %e", imag_ans);
                 }
                 else {
-                    output = "nan + j " + to_string(imag_ans) + "\n";
+                   // output = "nan + j " + to_string(imag_ans) + "\n";
+                    sprintf(output, "nan + j %e", imag_ans);
                 }
             }
             else if (!isnan(real_ans) && isnan(imag_ans)) {
-                output = to_string(real_ans) + " + j NaN\n";
+               // output = to_string(real_ans) + " + j NaN\n";
+                sprintf(output, "%e - j nan", real_ans);
             }
             else if (isnan(real_ans) && isnan(imag_ans)) {
-                output = "nan + j nan\n";
+               // output = "nan + j nan\n";
+                sprintf(output, "nan + j nan");
             }
         }
         else {
             //Checks if imaginary component of the answer is negative and formats the answer accordingly
             if (imag_ans < 0) {
-                output = to_string(real_ans) + " - j " + to_string(abs(imag_ans)) + "\n";
+                //output = to_string(real_ans) + " - j " + to_string(abs(imag_ans)) + "\n";
+
+                sprintf(output, "%.5e - j %.5e", real_ans, imag_ans);
+
             }
             else {
-                output = to_string(real_ans) + " + j " + to_string(imag_ans) + "\n";
+                sprintf(output, "%.5e + j %.5e", real_ans, imag_ans);
             }
         }
     }
