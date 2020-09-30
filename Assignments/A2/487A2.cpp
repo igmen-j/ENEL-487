@@ -52,10 +52,10 @@ int main() {
         full_in_path[260], full_out_path[260];
     bool is_error, in_a_mode;
 
-    printf("Complex calculator\n\n");
-    printf("Type a letter to specify the arithmetic operator (A, S, M, D)\n");
-    printf("followed by two complex numbers expressed as pairs of doubles.\n");
-    printf("Type Q to quit.\n");
+    fprintf(stderr, "Complex calculator\n\n");
+    fprintf(stderr, "Type a letter to specify the arithmetic operator (A, S, M, D)\n");
+    fprintf(stderr, "followed by two complex numbers expressed as pairs of doubles.\n");
+    fprintf(stderr, "Type Q to quit.\n");
 
     //Will run until user enters "Q" in the command
     while (true) {
@@ -65,7 +65,7 @@ int main() {
         in_a_mode = false;
         output = "";
 
-        printf("\nEnter exp: ");
+        fprintf(stderr, "\nEnter exp: ");
         fgets(user_input, sizeof(user_input), stdin);
 
         //Program ends when user enters 'q'
@@ -86,7 +86,8 @@ int main() {
                 fprintf(stderr, "Invalid input.\n");
             }
             else {
-                printf(output.c_str());
+                output += "\n";
+                fprintf(stdout, output.c_str());
             }
         }
         
@@ -121,7 +122,7 @@ int main() {
         }
     }
 
-    printf("Program ended\n");
+    fprintf(stderr, "Program ended\n");
 }
 
 /*
@@ -169,30 +170,23 @@ string solve(char sign, Complex z1, Complex z2, bool &error) {
             //Checks if NAN and formats the answer based on this
             if (isnan(real_ans) && !isnan(imag_ans)) {
                 if (imag_ans < 0) {
-                    //output = "nan - j " + to_string(abs(imag_ans)) + "\n";
-                    sprintf(output, "nan - j %e", imag_ans);
+                    sprintf(output, "nan - j %.5e", abs(imag_ans));
                 }
                 else {
-                   // output = "nan + j " + to_string(imag_ans) + "\n";
-                    sprintf(output, "nan + j %e", imag_ans);
+                    sprintf(output, "nan + j %.5e", imag_ans);
                 }
             }
             else if (!isnan(real_ans) && isnan(imag_ans)) {
-               // output = to_string(real_ans) + " + j NaN\n";
-                sprintf(output, "%e - j nan", real_ans);
+                sprintf(output, "%.5e - j nan", real_ans);
             }
             else if (isnan(real_ans) && isnan(imag_ans)) {
-               // output = "nan + j nan\n";
                 sprintf(output, "nan + j nan");
             }
         }
         else {
             //Checks if imaginary component of the answer is negative and formats the answer accordingly
             if (imag_ans < 0) {
-                //output = to_string(real_ans) + " - j " + to_string(abs(imag_ans)) + "\n";
-
-                sprintf(output, "%.5e - j %.5e", real_ans, imag_ans);
-
+                sprintf(output, "%.5e - j %.5e", real_ans, abs(imag_ans));
             }
             else {
                 sprintf(output, "%.5e + j %.5e", real_ans, imag_ans);
@@ -226,13 +220,14 @@ void batch_mode(char path[], char output_file[]) {
     while (fgets(user_input, sizeof(user_input), in_file)) {
         //Counter checks if the command is correct -- see main function for similar comment
         counter = sscanf(user_input, "%1c %f %f %f %f", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
-        output = solve(sign, z1, z2, error);
 
         //If there is whitespace, the program also adds whitespace to the output
-        if (user_input[0] == '\n') {
-            fputs("\n", out_file);
+        if (sign == '\n') {
+            fprintf(out_file, "\n");
             continue;
         }
+
+        output = solve(sign, z1, z2, error);
 
         //Breaks the loop if the program encounters 'q'
         if (counter == 1 && (user_input[0] == 'q' || user_input[0] == 'Q')) {
@@ -241,15 +236,17 @@ void batch_mode(char path[], char output_file[]) {
 
         //Will write error message if command is invalid. Otherwise write answer
         if (error || counter < 5) {
-            fputs("Invalid input.\n", out_file);
+            fprintf(out_file, "Invalid input.\n");
         }
         else {
-            fputs(output.c_str(), out_file);
+            output += "\n";
+            fprintf(out_file, output.c_str());
+
         }
     }
 
-    printf("Reading inputs from %s\n", path);
-    printf("Results written to %s\n", output_file);
+    fprintf(stderr, "Reading inputs from %s\n", path);
+    fprintf(stderr, "Results written to %s\n", output_file);
 
     fclose(in_file);
     fclose(out_file);
@@ -269,8 +266,8 @@ void sub(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
 
 //Multiplication
 void mul(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
-    real_ans = z1.real * z2.real;
-    imag_ans = z1.imag * z2.imag;
+    real_ans = (z1.real * z2.real) - (z1.imag * z2.imag);
+    imag_ans = (z1.real * z2.imag) + (z2.real * z1.imag);
 }
 
 //Division
@@ -279,10 +276,10 @@ void div(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
 
     if (z2.real == 0 && z2.imag != 0) {
         real_ans = NAN;
-        imag_ans = z1.imag / z2.imag;
+        imag_ans = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
     }
     else if (z2.real != 0 && z2.imag == 0) {
-        real_ans = z1.real / z2.real;
+        real_ans = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
         imag_ans = NAN;
     }
     else if (z2.real == 0 && z2.imag == 0) {
@@ -290,7 +287,7 @@ void div(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
         imag_ans = NAN;
     }
     else {
-        real_ans = z1.real / z2.real;
-        imag_ans = z1.imag / z2.imag;
+        real_ans = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
+        imag_ans = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
     }
 }

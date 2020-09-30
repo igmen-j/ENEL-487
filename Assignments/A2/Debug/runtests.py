@@ -11,7 +11,7 @@ import sys
 
 # Here's the program name:
 if len(sys.argv) != 2:
-    print ("Usage: runtests.py prog_to_test")
+    print "Usage: runtests.py prog_to_test"
     sys.exit(1)
 
 prog = sys.argv[1]  # set the program to test
@@ -214,18 +214,18 @@ for vec in testvectors:
     
     try:
         if is_equal(actual_output, expected_output):
-            print ("."),
+            print ".",
         else:
-            print ("Tolerance ERROR: ")
-            print ("input: ", vec[0])
-            print ("expected result: ", vec[1])
-            print ("actual result: ", actual_output)
+            print "Tolerance ERROR: "
+            print "input: ", vec[0]
+            print "expected result: ", vec[1]
+            print "actual result: ", actual_output
             #sys.exit(2)
     except:
-        print ("ERROR: ")
-        print ("input: ", vec[0])
-        print ("expected result: ", vec[1])
-        print ("actual result: ", actual_output)
+        print "ERROR: "
+        print "input: ", vec[0]
+        print "expected result: ", vec[1]
+        print "actual result: ", actual_output
         #sys.exit(2)
 
-print ("OK")
+print "OK"
