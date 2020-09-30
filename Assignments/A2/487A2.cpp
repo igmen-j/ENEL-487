@@ -155,7 +155,7 @@ string solve(char sign, Complex z1, Complex z2, bool &error) {
     }
     else if (sign == 'd' || sign == 'D') {
         div(z1, z2, real_ans, imag_ans);
-        if (z2.real == 0 || z2.imag == 0) {
+        if (z2.real == 0 && z2.imag == 0) {
             div_by_zero = true;
         }
     }
@@ -166,22 +166,8 @@ string solve(char sign, Complex z1, Complex z2, bool &error) {
     //Checks if there's error
     if (!error) {
         if (div_by_zero) {
-            //Checks which components was divided by zero
-            //Checks if NAN and formats the answer based on this
-            if (isnan(real_ans) && !isnan(imag_ans)) {
-                if (imag_ans < 0) {
-                    sprintf(output, "nan - j %.5e", abs(imag_ans));
-                }
-                else {
-                    sprintf(output, "nan + j %.5e", imag_ans);
-                }
-            }
-            else if (!isnan(real_ans) && isnan(imag_ans)) {
-                sprintf(output, "%.5e - j nan", real_ans);
-            }
-            else if (isnan(real_ans) && isnan(imag_ans)) {
-                sprintf(output, "nan + j nan");
-            }
+            //Checks if divided by zero
+            sprintf(output, "nan + j nan");
         }
         else {
             //Checks if imaginary component of the answer is negative and formats the answer accordingly
@@ -274,15 +260,7 @@ void mul(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
 //If division by zero, set answer to NAN
 void div(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
 
-    if (z2.real == 0 && z2.imag != 0) {
-        real_ans = NAN;
-        imag_ans = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
-    }
-    else if (z2.real != 0 && z2.imag == 0) {
-        real_ans = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
-        imag_ans = NAN;
-    }
-    else if (z2.real == 0 && z2.imag == 0) {
+    if (z2.real == 0 && z2.imag == 0) {
         real_ans = NAN;
         imag_ans = NAN;
     }
