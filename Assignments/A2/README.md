@@ -3,7 +3,8 @@
 This program performs basic complex number arithmetic.  
 It has two modes: interactive mode and batch mode.  
 _Interactive mode_ allows the user to enter command directly from the terminal and the program will print the result.  
-_Batch mode_ allows to use to enter a file with several commands. The program will then create a new file with the results.
+_Batch mode_ allows to use to enter a file with several commands. The program will then create a new file with the results.  
+If the output file exists, it will overwrite it.  
   
 If the program read 5 inputs, it will process the command in interactive mode.
 With 3 inputs, it will be in batch mode.
@@ -21,7 +22,7 @@ To run in _interactive mode_, the user must enter five inputs.
 The first component is the operation in the form of A, S, M, or D (addition, subtraction, multiplication ,or
 division). This is not case-sensitive.  
 The next two are the first complex number.  
-The last two are the seconf complex number.  
+The last two are the second complex number.  
   
 The an example of the command would then be:  
 (1e3 + 2j) + (3 - 4.5j)
