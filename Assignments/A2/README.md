@@ -42,8 +42,8 @@ eg) .\assign1\
 This program handles errors in different ways:  
 - Division be zero: When the user enters a command with division by zero, the program will output the result as nan.  
 ```bash
-Enter exp: d 1 2 0 4
-nan + j 0.500000
+Enter exp: d 1 2 0 0
+nan + j nan
 ```
 - Incorrect format: 
 If the command does not have three or five correct inputs, the program will give an error message.  
