@@ -121,6 +121,8 @@ Returns the answer in complex format
 */
 Complex solve(char sign, Complex z1, Complex z2, bool &error) {
     Complex answer;
+    answer.real = 0;
+    answer.imag = 0;
     error = false;
 
     //Checks which operation to use
