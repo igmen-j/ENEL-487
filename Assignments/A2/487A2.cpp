@@ -17,16 +17,14 @@
     With this, I can now use the original format of some of the commands
 **/
 
-
-#include <iostream>
-#include <string>
 #include <stdlib.h>
 #include <cmath>
-#include <fstream>
 #include <cstdio>
 #include <cstring>
 
 using namespace std;
+
+#define LINE_BUFFER 200
 
 //Data type for the complex number
 class Complex {
@@ -35,94 +33,78 @@ public:
     float imag;
 };
 
-string solve(char, Complex, Complex, bool&);
-void batch_mode(char[], char[]);
-void add(Complex, Complex, float&, float&);
-void sub(Complex, Complex, float&, float&);
-void mul(Complex, Complex, float&, float&);
-void div(Complex, Complex, float&, float&);
+Complex add(Complex, Complex);
+Complex sub(Complex, Complex);
+Complex mul(Complex, Complex);
+Complex div(Complex, Complex);
+Complex solve(char, Complex, Complex, bool&);
+void print_result(Complex);
+
 
 int main() {
-    Complex z1, z2;
-    char user_input[200], sign;
-    float real_ans, imag_ans;
-    int check_interactive, check_batch;
-    string output;
-    char path[100], in_filename[100], out_filename[100], 
-        full_in_path[260], full_out_path[260];
-    bool is_error, in_a_mode;
+    Complex z1, z2, answer;
+    char user_input[LINE_BUFFER], sign;
+    int check_interactive;
+    bool is_error;
+    bool is_done = false;
 
     fprintf(stderr, "Complex calculator\n\n");
     fprintf(stderr, "Type a letter to specify the arithmetic operator (A, S, M, D)\n");
     fprintf(stderr, "followed by two complex numbers expressed as pairs of doubles.\n");
-    fprintf(stderr, "Type Q to quit.\n");
+    fprintf(stderr, "Type Q to quit.\n\n");
 
     //Will run until user enters "Q" in the command
-    while (true) {
-        real_ans = 0;
-        imag_ans = 0;
+    while (!is_done) {
         is_error = false;
-        in_a_mode = false;
-        output = "";
 
-        fprintf(stderr, "\nEnter exp: ");
+        fprintf(stderr, "Enter exp: ");
         fgets(user_input, sizeof(user_input), stdin);
-
-        //Program ends when user enters 'q'
-        if (strcmp(user_input, "q\n") == 0 || strcmp(user_input, "Q\n") == 0) {
-            break;
-        }
-
-        //sscanf returns an int value based on the number of correct placeholders entered
-        //The program will determine which mode it goes in based on the number returned
         check_interactive = sscanf(user_input, "%1c %f %f %f %f", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
-        check_batch = sscanf(user_input, "%s < %s > %s", &path, &in_filename, &out_filename);
 
-        //Interactive mode
-        if (check_interactive == 5) {
-            in_a_mode = true;
-            output = solve(user_input[0], z1, z2, is_error);
-            if (is_error) {
+        if (strcmp(user_input, "q\n") == 0 || strcmp(user_input, "Q\n") == 0) {
+            is_done = true;
+        }
+        else if (strcmp(user_input, "\n") == 0) {
+            continue;
+        }
+        else {
+            //Checks if input is entered properly
+            if (check_interactive >= 5) {
+                answer = solve(sign, z1, z2, is_error);
+                if (is_error == true) {
+                    fprintf(stderr, "Invalid operator.\n");
+                }
+                else {
+                    print_result(answer);
+                }
+            }
+            else {
                 fprintf(stderr, "Invalid input.\n");
             }
-            else {
-                output += "\n";
-                fprintf(stdout, output.c_str());
-            }
-        }
-        
-        //Batch mode
-        if (check_batch == 3) {
-            in_a_mode = true;
-
-            //Concatenates the path and the input/output files
-            strcpy(full_in_path, path);
-            strcat(full_in_path, in_filename);
-            strcpy(full_out_path, path);
-            strcat(full_out_path, out_filename);
-
-            FILE* in_file, * out_file;
-
-            in_file = fopen(full_in_path, "r");
-            out_file = fopen(full_out_path, "w");
-
-            //Checks if the file exists
-            if (in_file){
-                batch_mode(full_in_path, full_out_path);
-            }
-            else {
-                fprintf(stderr, "Error: Incorrect format\n");
-                fprintf(stderr, "Possible causes: Missing backslash at the end of the path, invalid path, or input file does not exist\n");
-            }
-        }
-        
-        //If check_interactive or check_batch fails to get 5 or 3 respectively, the user entered incorrect input -- error
-        if (!in_a_mode) {
-            fprintf(stderr, "Invalid input.\n");
         }
     }
 
     fprintf(stderr, "Program ended\n");
+}
+
+/*
+Prints the answer and formats it
+*/
+void print_result(Complex answer) {
+    //Checks if divided by zero
+    if (isnan(answer.real) && isnan(answer.imag)) {
+        fprintf(stdout, "nan + j nan\n");
+    }
+    else {
+        //Checks if imaginary component of the answer is negative and formats the answer accordingly
+        if (answer.imag < 0) {
+            answer.imag *= -1;
+            fprintf(stdout, "%.5e - j %.5e\n", answer.real, answer.imag);
+        }
+        else {
+            fprintf(stdout, "%.5e + j %.5e\n", answer.real, answer.imag);
+        }
+    }
 }
 
 /*
@@ -134,138 +116,71 @@ z1, z2: the complex numbers to solve
 error: passed by reference, checks if there is an error in the operation
 
 Output:
-If an error is found (eg. sign is not a,s,m,d) it will return an empty string and set error to true
-Otherwise, it will return a correct format of the answer in string
+If an error is found (eg. sign is not a,s,m,d), bool error will be set
+Returns the answer in complex format
 */
-string solve(char sign, Complex z1, Complex z2, bool &error) {
-    char output[100];
-    float real_ans, imag_ans;
-    bool div_by_zero = false;
+Complex solve(char sign, Complex z1, Complex z2, bool &error) {
+    Complex answer;
     error = false;
 
     //Checks which operation to use
     if (sign == 'a' || sign == 'A') {
-        add(z1, z2, real_ans, imag_ans);
+        answer = add(z1, z2);
     }
     else if (sign == 's' || sign == 'S') {
-        sub(z1, z2, real_ans, imag_ans);
+        answer = sub(z1, z2);
     }
     else if (sign == 'm' || sign == 'M') {
-        mul(z1, z2, real_ans, imag_ans);
+        answer = mul(z1, z2);
     }
     else if (sign == 'd' || sign == 'D') {
-        div(z1, z2, real_ans, imag_ans);
-        if (z2.real == 0 && z2.imag == 0) {
-            div_by_zero = true;
-        }
+        answer = div(z1, z2);
     }
     else {
         error = true;
     }
-
-    //Checks if there's error
-    if (!error) {
-        if (div_by_zero) {
-            //Checks if divided by zero
-            sprintf(output, "nan + j nan");
-        }
-        else {
-            //Checks if imaginary component of the answer is negative and formats the answer accordingly
-            if (imag_ans < 0) {
-                sprintf(output, "%.5e - j %.5e", real_ans, abs(imag_ans));
-            }
-            else {
-                sprintf(output, "%.5e + j %.5e", real_ans, imag_ans);
-            }
-        }
-    }
-    return output;
-}
-
-/*
-File processing part
-Program will read the input file line by line, process the command, and write the result in the output file
-Will loop until EOF or it reads "Q"
-
-Inputs:
-path: the input path
-output_file: the output path
-*/
-void batch_mode(char path[], char output_file[]) {
-    int counter;
-    Complex z1, z2;
-    char user_input[200], sign;
-    bool error = false;
-    string output = "";
-    FILE* in_file, * out_file;
-
-    in_file = fopen(path, "r");
-    out_file = fopen(output_file, "w");
-
-    //Reads the input file line by line
-    while (fgets(user_input, sizeof(user_input), in_file)) {
-        //Counter checks if the command is correct -- see main function for similar comment
-        counter = sscanf(user_input, "%1c %f %f %f %f", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
-
-        //If there is whitespace, the program also adds whitespace to the output
-        if (sign == '\n') {
-            fprintf(out_file, "\n");
-            continue;
-        }
-
-        output = solve(sign, z1, z2, error);
-
-        //Breaks the loop if the program encounters 'q'
-        if (counter == 1 && (user_input[0] == 'q' || user_input[0] == 'Q')) {
-            break;
-        }
-
-        //Will write error message if command is invalid. Otherwise write answer
-        if (error || counter < 5) {
-            fprintf(out_file, "Invalid input.\n");
-        }
-        else {
-            output += "\n";
-            fprintf(out_file, output.c_str());
-
-        }
-    }
-
-    fprintf(stderr, "Reading inputs from %s\n", path);
-    fprintf(stderr, "Results written to %s\n", output_file);
-
-    fclose(in_file);
-    fclose(out_file);
+    return answer;
 }
 
 //Addition
-void add(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
-    real_ans = z1.real + z2.real;
-    imag_ans = z1.imag + z2.imag;
+Complex add(Complex z1, Complex z2) {
+    Complex sum;
+    sum.real = z1.real + z2.real;
+    sum.imag = z1.imag + z2.imag;
+
+    return sum;
 }
 
 //Subtraction
-void sub(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
-    real_ans = z1.real - z2.real;
-    imag_ans = z1.imag - z2.imag;
+Complex sub(Complex z1, Complex z2) {
+    Complex difference;
+    difference.real = z1.real - z2.real;
+    difference.imag = z1.imag - z2.imag;
+
+    return difference;
 }
 
 //Multiplication
-void mul(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
-    real_ans = (z1.real * z2.real) - (z1.imag * z2.imag);
-    imag_ans = (z1.real * z2.imag) + (z2.real * z1.imag);
+Complex mul(Complex z1, Complex z2) {
+    Complex product;
+    product.real = (z1.real * z2.real) - (z1.imag * z2.imag);
+    product.imag = (z1.real * z2.imag) + (z2.real * z1.imag);
+
+    return product;
 }
 
 //Division
 //If division by zero, set answer to NAN
-void div(Complex z1, Complex z2, float& real_ans, float& imag_ans) {
-
+Complex div(Complex z1, Complex z2) {
+    Complex quotient;
     if (z2.real == 0 && z2.imag == 0) {
-        real_ans = NAN;
-        imag_ans = NAN;
+        quotient.real = NAN;
+        quotient.imag = NAN;
     }
     else {
-        real_ans = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
-        imag_ans = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
+        quotient.real = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
+        quotient.imag = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
     }
+
+    return quotient;
 }
