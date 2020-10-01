@@ -55,7 +55,7 @@ If the command does not have five correct inputs, the program will give an error
 Enter exp: a 1
 Invalid input.
 ```
-Limitation: If the first five (interactive mode) or first three (batch mode) are correct, the program will read it as correct despite it having more int the command  
+Limitation: If the first five inputs are correct, the program will read it as correct despite it having more in the command  
 ```bash
 Enter exp: a 1 2 3 4 the program will ignore anything after the fifth input
 4.000000 + j 6.000000
