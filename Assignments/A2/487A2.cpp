@@ -39,6 +39,7 @@ Complex mul(Complex, Complex);
 Complex div(Complex, Complex);
 Complex solve(char, Complex, Complex, bool&);
 void print_result(Complex);
+bool user_quit(char[]);
 
 
 int main() {
@@ -59,13 +60,13 @@ int main() {
 
         fprintf(stderr, "Enter exp: ");
         fgets(user_input, sizeof(user_input), stdin);
-        check_interactive = sscanf(user_input, "%1c %f %f %f %f", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
+        check_interactive = sscanf(user_input, "%1c %f %f %f %f\n", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
 
-        if (strcmp(user_input, "q\n") == 0 || strcmp(user_input, "Q\n") == 0) {
+        if (user_quit(user_input)) {
             is_done = true;
         }
         else if (strcmp(user_input, "\n") == 0) {
-            continue;
+            fprintf(stdout, "\n");
         }
         else {
             //Checks if input is entered properly
@@ -104,6 +105,16 @@ void print_result(Complex answer) {
         else {
             fprintf(stdout, "%.5e + j %.5e\n", answer.real, answer.imag);
         }
+    }
+}
+
+bool user_quit(char user_input[]) {
+    if (strcmp(user_input, "q\n") == 0 || strcmp(user_input, "Q\n") == 0 ||
+        strcmp(user_input, "q") == 0 || strcmp(user_input, "Q") == 0) {
+        return true;
+    }
+    else {
+        return false;
     }
 }
 
