@@ -22,7 +22,7 @@ division). This is not case-sensitive.
 The next two are the first complex number.  
 The last two are the second complex number.  
   
-The an example of the command would then be:  
+An example of the command would then be:  
 (1e3 + 2j) + (3 - 4.5j)
 ```bash
 Enter exp: a 1e3 2 3 -4.5
@@ -34,7 +34,7 @@ To run in _batch mode_, the user must enter command below:
 .\yourexecutable < inputfile.txt > outputfile.txt
 ```  
 
-To quit
+To quit, enter q  
 
 ## Error checks
 This program handles errors in different ways:  
