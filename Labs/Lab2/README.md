@@ -1,6 +1,7 @@
 # Lab 2 - CLI on the Target  
 
 This lab is all about USART and how the STM32 Nucleo board communicates using the CLI.  
+Code: https://github.com/igmen-j/ENEL-487/blob/master/Labs/Lab2/Core/Src/main.c
 
 ## Equipment and Software Requirements
 - PC
