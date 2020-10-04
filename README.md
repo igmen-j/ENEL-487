@@ -8,3 +8,4 @@ Repository for ENEL 487 Embedded and Real-Time Software Systems class
 
 ## Labs
 - L1: Blinky [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab1)
+- L2: CLI on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab2)
