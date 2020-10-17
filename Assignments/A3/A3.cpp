@@ -30,27 +30,27 @@ using namespace std;
 //Data type for the complex number
 class Complex {
 public:
-    float real;
-    float imag;
+    double real;
+    double imag;
 };
 
 Complex add(Complex, Complex);
 Complex sub(Complex, Complex);
 Complex mul(Complex, Complex);
 Complex div(Complex, Complex);
-float abs(Complex);
-float arg(Complex);
-float argDeg(Complex);
+double abs(Complex);
+double arg(Complex);
+double argDeg(Complex);
 Complex exp(Complex);
 Complex inv(Complex);
-Complex solve(char, Complex, Complex, bool&);
-void print_result(Complex);
+Complex solve(char[], Complex, Complex, bool&, int);
+void print_result(char[], Complex);
 bool user_quit(char[]);
 
 
 int main() {
     Complex z1, z2, answer;
-    char user_input[LINE_BUFFER], sign;
+    char user_input[LINE_BUFFER], command[LINE_BUFFER];
     int check_interactive;
     bool is_error;
     bool is_done = false;
@@ -66,7 +66,7 @@ int main() {
 
         fprintf(stderr, "Enter exp: ");
         fgets(user_input, sizeof(user_input), stdin);
-        check_interactive = sscanf(user_input, "%1c %f %f %f %f\n", &sign, &z1.real, &z1.imag, &z2.real, &z2.imag);
+        check_interactive = sscanf(user_input, "%s %lf %lf %lf %lf\n", command, &z1.real, &z1.imag, &z2.real, &z2.imag);
 
         if (user_quit(user_input)) {
             is_done = true;
@@ -76,13 +76,13 @@ int main() {
         }
         else {
             //Checks if input is entered properly
-            if (check_interactive >= 5) {
-                answer = solve(sign, z1, z2, is_error);
+            if (check_interactive == 3 || check_interactive == 5) {
+                answer = solve(command, z1, z2, is_error, check_interactive);
                 if (is_error == true) {
                     fprintf(stderr, "Invalid operator.\n");
                 }
                 else {
-                    print_result(answer);
+                    print_result(command, answer);
                 }
             }
             else {
@@ -90,26 +90,30 @@ int main() {
             }
         }
     }
-
     fprintf(stderr, "Program ended\n");
 }
 
 /*
 Prints the answer and formats it
 */
-void print_result(Complex answer) {
+void print_result(char command[], Complex answer) {
     //Checks if divided by zero
     if (isnan(answer.real) && isnan(answer.imag)) {
         fprintf(stdout, "nan + j nan\n");
     }
     else {
-        //Checks if imaginary component of the answer is negative and formats the answer accordingly
-        if (answer.imag < 0) {
-            answer.imag *= -1;
-            fprintf(stdout, "%.5e - j %.5e\n", answer.real, answer.imag);
+        if (strcmp(command, "abs") == 0 || strcmp(command, "arg") == 0 || strcmp(command, "argdeg") == 0) {
+            fprintf(stdout, "%.5e\n", answer.real);
         }
         else {
-            fprintf(stdout, "%.5e + j %.5e\n", answer.real, answer.imag);
+            //Checks if imaginary component of the answer is negative and formats the answer accordingly
+            if (answer.imag < 0) {
+                answer.imag *= -1;
+                fprintf(stdout, "%.5e - j %.5e\n", answer.real, answer.imag);
+            }
+            else {
+                fprintf(stdout, "%.5e + j %.5e\n", answer.real, answer.imag);
+            }
         }
     }
 }
@@ -136,24 +140,49 @@ Output:
 If an error is found (eg. sign is not a,s,m,d), bool error will be set
 Returns the answer in complex format
 */
-Complex solve(char sign, Complex z1, Complex z2, bool& error) {
+Complex solve(char sign[], Complex z1, Complex z2, bool& error, int num_inputs) {
     Complex answer;
     answer.real = 0;
     answer.imag = 0;
     error = false;
-
+    
     //Checks which operation to use
-    if (sign == 'a' || sign == 'A') {
-        answer = add(z1, z2);
+    if (num_inputs == 5) {
+        if (strcmp(sign, "a") == 0 || strcmp(sign, "A") == 0) {
+            answer = add(z1, z2);
+        }
+        else if (strcmp(sign, "s") == 0 || strcmp(sign, "S") == 0) {
+            answer = sub(z1, z2);
+        }
+        else if (strcmp(sign, "m") == 0 || strcmp(sign, "M") == 0) {
+            answer = mul(z1, z2);
+        }
+        else if (strcmp(sign, "d") == 0 || strcmp(sign, "D") == 0) {
+            answer = div(z1, z2);
+        }
+        else {
+            error = true;
+        }
     }
-    else if (sign == 's' || sign == 'S') {
-        answer = sub(z1, z2);
-    }
-    else if (sign == 'm' || sign == 'M') {
-        answer = mul(z1, z2);
-    }
-    else if (sign == 'd' || sign == 'D') {
-        answer = div(z1, z2);
+    else if (num_inputs == 3) {
+        if (strcmp(sign, "abs") == 0) {
+            answer.real = abs(z1);
+        }
+        else if (strcmp(sign, "arg") == 0) {
+            answer.real = arg(z1);
+        }
+        else if (strcmp(sign, "argdeg") == 0) {
+            answer.real = argDeg(z1);
+        }
+        else if (strcmp(sign, "exp") == 0) {
+            answer = exp(z1);
+        }
+        else if (strcmp(sign, "inv") == 0) {
+            answer = inv(z1);
+        }
+        else {
+            error = true;
+        }
     }
     else {
         error = true;
@@ -166,7 +195,6 @@ Complex add(Complex z1, Complex z2) {
     Complex sum;
     sum.real = z1.real + z2.real;
     sum.imag = z1.imag + z2.imag;
-
     return sum;
 }
 
@@ -175,7 +203,6 @@ Complex sub(Complex z1, Complex z2) {
     Complex difference;
     difference.real = z1.real - z2.real;
     difference.imag = z1.imag - z2.imag;
-
     return difference;
 }
 
@@ -184,7 +211,6 @@ Complex mul(Complex z1, Complex z2) {
     Complex product;
     product.real = (z1.real * z2.real) - (z1.imag * z2.imag);
     product.imag = (z1.real * z2.imag) + (z2.real * z1.imag);
-
     return product;
 }
 
@@ -200,31 +226,45 @@ Complex div(Complex z1, Complex z2) {
         quotient.real = ((z1.real * z2.real) + (z1.imag * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
         quotient.imag = ((z1.imag * z2.real) - (z1.real * z2.imag)) / ((z2.real * z2.real) + (z2.imag * z2.imag));
     }
-
     return quotient;
 }
 
 //Returns the magnitude of the input complex number
-float abs(Complex z1) {
+double abs(Complex z1) {
     return sqrt(pow(z1.real, 2) + (pow(z1.imag, 2)));
 }
 
 //Returns the angle of the input complex number in radians
-float arg(Complex z1) {
-    return atan(z1.imag / z1.real) * PI / 180;
+double arg(Complex z1) {
+    return atan(z1.imag / z1.real);
 }
 
 //Returns the angle of the input complex number in degrees
-float argDeg(Complex z1) {
-    return atan(z1.imag / z1.real);
+double argDeg(Complex z1) {
+    double answer;
+    answer = atan(z1.imag / z1.real) * 180 / PI;
+
+    if (z1.real < 0 && z1.imag > 0) {
+        answer += 180;
+    }
+    else if (z1.real < 0 && z1.imag < 0) {
+        answer -= 180;
+    }
+    return answer;
 }
 
 //Returns the exponential of the input number
 Complex exp(Complex z1) {
-    return z1;
+    Complex answer;
+    answer.real = exp(z1.real) * cos(z1.imag);
+    answer.imag = exp(z1.real) * sin(z1.imag);
+    return answer;
 }
 
 //Return the reciprocal of the input complex number
 Complex inv(Complex z1) {
-    return z1;
+    Complex answer;
+    answer.real = z1.real / (pow(z1.real, 2) + pow(z1.imag, 2));
+    answer.imag = -1 * (z1.imag / (pow(z1.real, 2) + pow(z1.imag, 2)));
+    return answer;
 }
