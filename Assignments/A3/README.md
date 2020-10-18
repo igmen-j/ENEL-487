@@ -7,7 +7,7 @@ It has two modes: interactive mode and batch mode.
 _Interactive mode_ allows the user to enter command directly from the terminal and the program will print the result.  
 _Batch mode_ allows to user to redirect stdio to a file.
   
-The program is case sensitive.  
+The program is not case sensitive.  
 
 ## Installation
 
