@@ -1,7 +1,7 @@
 # Assignment 3 README
 
 This program performs basic complex number arithmetic.  
-It adds more functionality from Assignment 2 found [here](https://github.com/igmen-j/ENEL-487/tree/master/Assignments/A2)  
+It adds more functionality from Assignment 2 found [here](https://github.com/igmen-j/ENEL-487/tree/master/Assignments/A2).  
   
 It has two modes: interactive mode and batch mode.  
 _Interactive mode_ allows the user to enter command directly from the terminal and the program will print the result.  
@@ -19,7 +19,7 @@ g++ -o yourfilenamehere.exe 487A2.cpp
 ## Run
 
 To run in _interactive mode_, the user must enter five inputs.
-The first component is the operation in the form of A, S, M, or D (addition, subtraction, multiplication ,or
+The first component is the operation in the form of A, S, M, or D (addition, subtraction, multiplication, or
 division). This is not case-sensitive.  
 The next two are the first complex number.  
 The last two are the second complex number.  
@@ -30,8 +30,10 @@ _arg_ : Returns the angle part (or argument) of the given complex number, in
 radians.  
 _argDeg_ : Returns the argument of the given complex number, in degrees.  
 _exp_ : For the given complex number, z, calculate the exponential of that
-number, e<sup>z<sup>.  
-inv Return the reciprocal of the given complex number: 1 / z.  
+number, e<sup>z</sup>.  
+_inv_ Return the reciprocal of the given complex number: 1 / z.  
+
+For these new commands, user must only enter three inputs, the command and the complex number (real and imaginary).  
   
 An example of the command would then be:  
 (1e3 + 2j) + (3 - 4.5j)
