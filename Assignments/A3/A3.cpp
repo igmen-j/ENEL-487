@@ -29,7 +29,10 @@ using namespace std;
 #define BASIC_MATH_INPUT 5
 #define COMPLEX_MATH_INPUT 3
 
-//Data type for the complex number
+/**
+    Data type for the complex number
+    Two variables: real and imag which corresponds to the real and imaginary number of the complex number
+**/
 class Complex {
 public:
     double real;
@@ -60,10 +63,7 @@ int main() {
     bool div_by_zero;
     bool is_done = false;
 
-    fprintf(stderr, "Complex calculator\n\n");
-    fprintf(stderr, "Type a letter to specify the arithmetic operator (A, S, M, D)\n");
-    fprintf(stderr, "followed by two complex numbers expressed as pairs of doubles.\n");
-    fprintf(stderr, "Type Q to quit.\n\n");
+    fprintf(stderr, "Complex number calculator\n\n");
 
     //Will run until user enters "Q" in the command
     while (!is_done) {
@@ -86,6 +86,7 @@ int main() {
             if (check_interactive == COMPLEX_MATH_INPUT || check_interactive == BASIC_MATH_INPUT) {
                 answer = solve(command, z1, z2, is_error, div_by_zero, check_interactive);
                 if (is_error == true) {
+                    //will print an error message if user enters an incorrect operator
                     if (is_basic_math(command)) {
                         fprintf(stderr, "Error: Required input for this operator is 5.\n");
                     }
@@ -123,6 +124,11 @@ int main() {
 
 /*
 Prints the answer and formats it
+Inputs:
+    Command - this is the operastor
+    Answer - the answer of the operation
+If the operator is abs, arg, or argdeg, print only one number
+Otherwise, print in rectagular form
 */
 void print_result(char command[], Complex answer) {
 
@@ -141,6 +147,10 @@ void print_result(char command[], Complex answer) {
     }
 }
 
+/*
+Checks if the user has entered 'q' or 'Q' as the command
+Input: user_input - the whole command entered by the user
+*/
 bool user_quit(char user_input[]) {
     if (strcmp(user_input, "q\n") == 0 || strcmp(user_input, "Q\n") == 0 ||
         strcmp(user_input, "q") == 0 || strcmp(user_input, "Q") == 0) {
@@ -151,6 +161,10 @@ bool user_quit(char user_input[]) {
     }
 }
 
+/*
+Checks if the operator is A, S, M, or D
+Returns true if so and false otherwise
+*/
 bool is_basic_math(char command[]) {
     if (strcmp(command, "a") == 0 || strcmp(command, "A") == 0 || strcmp(command, "s") == 0 || 
         strcmp(command, "S") == 0 || strcmp(command, "m") == 0 || strcmp(command, "M") == 0 || 
@@ -160,6 +174,10 @@ bool is_basic_math(char command[]) {
     return false;
 }
 
+/*
+Checks if the operator is abs, arg, argdeg, exp. inv
+Returns true if so and false otherwise
+*/
 bool is_complex_math(char command[]) {
     if (strcmp(command, "abs") == 0 || strcmp(command, "arg") == 0 || strcmp(command, "argdeg") == 0 ||
         strcmp(command, "exp") == 0 || strcmp(command, "inv") == 0) {
@@ -177,7 +195,8 @@ z1, z2: the complex numbers to solve
 error: passed by reference, checks if there is an error in the operation
 
 Output:
-If an error is found (eg. sign is not a,s,m,d), bool error will be set
+If an error is found, bool error will be set
+If division by zero, bool div_by_zero will be set
 Returns the answer in complex format
 */
 Complex solve(char sign[], Complex z1, Complex z2, bool& error, bool& div_by_zero, int num_inputs) {
@@ -188,6 +207,7 @@ Complex solve(char sign[], Complex z1, Complex z2, bool& error, bool& div_by_zer
     div_by_zero = false;
     
     //Checks which operation to use
+    //BASIC_MATH_INPUT: user has entered 5 inputs
     if (num_inputs == BASIC_MATH_INPUT) {
         if (strcmp(sign, "a") == 0 || strcmp(sign, "A") == 0) {
             answer = add(z1, z2);
@@ -205,6 +225,7 @@ Complex solve(char sign[], Complex z1, Complex z2, bool& error, bool& div_by_zer
             error = true;
         }
     }
+    //COMPLEX_MATH_INPUT: user has entered 3 inputs
     else if (num_inputs == COMPLEX_MATH_INPUT) {
         if (strcmp(sign, "abs") == 0) {
             answer.real = abs(z1);
@@ -231,7 +252,10 @@ Complex solve(char sign[], Complex z1, Complex z2, bool& error, bool& div_by_zer
     return answer;
 }
 
-//Addition
+/*
+Adds the two complex numbers entered by the user
+Returns the sum
+*/
 Complex add(Complex z1, Complex z2) {
     Complex sum;
     sum.real = z1.real + z2.real;
@@ -239,7 +263,10 @@ Complex add(Complex z1, Complex z2) {
     return sum;
 }
 
-//Subtraction
+/*
+Subtracts the two complex numbers entered by the user
+Returns the difference
+*/
 Complex sub(Complex z1, Complex z2) {
     Complex difference;
     difference.real = z1.real - z2.real;
@@ -247,7 +274,10 @@ Complex sub(Complex z1, Complex z2) {
     return difference;
 }
 
-//Multiplication
+/*
+Multiplies the two complex numbers entered by the user
+Returns the product
+*/
 Complex mul(Complex z1, Complex z2) {
     Complex product;
     product.real = (z1.real * z2.real) - (z1.imag * z2.imag);
@@ -255,8 +285,13 @@ Complex mul(Complex z1, Complex z2) {
     return product;
 }
 
-//Division
-//If division by zero, set answer to NAN
+/*
+Divides the two complex numbers entered by the user
+Returns the quotient
+
+If the user has entered zero for the second complex number, this will set div_by_zero to true
+    and will return zero for the complex number
+*/
 Complex div(Complex z1, Complex z2, bool &div_by_zero) {
     Complex quotient;
     if (z2.real == 0 && z2.imag == 0) {
@@ -275,7 +310,10 @@ double abs(Complex z1) {
     return sqrt(pow(z1.real, 2) + (pow(z1.imag, 2)));
 }
 
-//Returns the angle of the input complex number in radians
+/*
+Returns the angle of the input complex number in radians
+If the real number is zero, it will set div_by_zero to true and will return zero
+*/
 double arg(Complex z1, bool& div_by_zero) {
     if (z1.real == 0) {
         div_by_zero = true;
@@ -284,7 +322,12 @@ double arg(Complex z1, bool& div_by_zero) {
     return atan(z1.imag / z1.real);
 }
 
-//Returns the angle of the input complex number in degrees
+/*
+Returns the angle of the input complex number in degrees
+If the real number is zero, it will set div_by_zero to true and will return zero
+
+Converts the answer to positive degree
+*/
 double argDeg(Complex z1, bool& div_by_zero) {
     double answer;
     if (z1.real == 0) {
@@ -301,7 +344,7 @@ double argDeg(Complex z1, bool& div_by_zero) {
     return answer;
 }
 
-//Returns the exponential of the input number
+//Returns the exponential of the input number = e^z
 Complex exp(Complex z1) {
     Complex answer;
     answer.real = exp(z1.real) * cos(z1.imag);
@@ -309,7 +352,11 @@ Complex exp(Complex z1) {
     return answer;
 }
 
-//Return the reciprocal of the input complex number
+/*
+Return the reciprocal of the input complex number
+If the user has entered zero for the complex number, this will set div_by_zero to true
+    and will return zero for the complex number
+*/
 Complex inv(Complex z1, bool& div_by_zero) {
     Complex answer;
     if (z1.real == 0 && z1.imag == 0) {
