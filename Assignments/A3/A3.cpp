@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <ctype.h>
 
 using namespace std;
 
@@ -72,7 +73,7 @@ int main() {
 
         fprintf(stderr, "Enter exp: ");
         fgets(user_input, sizeof(user_input), stdin);
-        check_interactive = sscanf(user_input, "%s %lf %lf %lf %lf %s\n", command, &z1.real, &z1.imag, 
+        check_interactive = sscanf(user_input, "%s %lf %lf %lf %lf %s\n", command, &z1.real, &z1.imag,
             &z2.real, &z2.imag, input_overflow);
 
         if (user_quit(user_input)) {
@@ -131,7 +132,6 @@ If the operator is abs, arg, or argdeg, print only one number
 Otherwise, print in rectagular form
 */
 void print_result(char command[], Complex answer) {
-
     if (strcmp(command, "abs") == 0 || strcmp(command, "arg") == 0 || strcmp(command, "argdeg") == 0) {
         fprintf(stdout, "%.5e\n", answer.real);
     }
@@ -166,9 +166,8 @@ Checks if the operator is A, S, M, or D
 Returns true if so and false otherwise
 */
 bool is_basic_math(char command[]) {
-    if (strcmp(command, "a") == 0 || strcmp(command, "A") == 0 || strcmp(command, "s") == 0 || 
-        strcmp(command, "S") == 0 || strcmp(command, "m") == 0 || strcmp(command, "M") == 0 || 
-        strcmp(command, "d") == 0 || strcmp(command, "D") == 0) {
+    if (strcmp(command, "a") == 0 || strcmp(command, "s") == 0 || 
+        strcmp(command, "m") == 0 || strcmp(command, "d") == 0) {
         return true;
     }
     return false;
@@ -199,26 +198,37 @@ If an error is found, bool error will be set
 If division by zero, bool div_by_zero will be set
 Returns the answer in complex format
 */
-Complex solve(char sign[], Complex z1, Complex z2, bool& error, bool& div_by_zero, int num_inputs) {
+Complex solve(char command[], Complex z1, Complex z2, bool& error, bool& div_by_zero, int num_inputs) {
     Complex answer;
+    char sign[LINE_BUFFER];
     answer.real = 0;
     answer.imag = 0;
     error = false;
     div_by_zero = false;
+
+    char user_operator[LINE_BUFFER];
+    for (int i = 0; i < strlen(command); i++) {
+        sign[i] = tolower(command[i]);
+    }
+
+    //clears the rest of the char array
+    for (int i = strlen(command); i < LINE_BUFFER; i++) {
+        sign[i] = '\0';
+    }
     
     //Checks which operation to use
     //BASIC_MATH_INPUT: user has entered 5 inputs
     if (num_inputs == BASIC_MATH_INPUT) {
-        if (strcmp(sign, "a") == 0 || strcmp(sign, "A") == 0) {
+        if (strcmp(sign, "a") == 0) {
             answer = add(z1, z2);
         }
-        else if (strcmp(sign, "s") == 0 || strcmp(sign, "S") == 0) {
+        else if (strcmp(sign, "s") == 0) {
             answer = sub(z1, z2);
         }
-        else if (strcmp(sign, "m") == 0 || strcmp(sign, "M") == 0) {
+        else if (strcmp(sign, "m") == 0) {
             answer = mul(z1, z2);
         }
-        else if (strcmp(sign, "d") == 0 || strcmp(sign, "D") == 0) {
+        else if (strcmp(sign, "d") == 0) {
             answer = div(z1, z2, div_by_zero);
         }
         else {
@@ -315,11 +325,25 @@ Returns the angle of the input complex number in radians
 If the real number is zero, it will set div_by_zero to true and will return zero
 */
 double arg(Complex z1, bool& div_by_zero) {
-    if (z1.real == 0) {
+    double answer;
+    if (z1.real == 0 && z1.imag == 0) {
         div_by_zero = true;
         return z1.real;
     }
-    return atan(z1.imag / z1.real);
+    else if (z1.real == 0 && z1.imag > 0) {
+        return PI / 2;  //90 degrees
+    }
+    else if (z1.real == 0 && z1.imag < 0) {
+        return 3 * PI / 2;
+    }
+    answer = atan(z1.imag / z1.real);
+    if (z1.real < 0 && z1.imag > 0) {
+        answer += PI;
+    }
+    else if (z1.real < 0 && z1.imag < 0) {
+        answer -= PI;
+    }
+    return answer;
 }
 
 /*
@@ -330,10 +354,21 @@ Converts the answer to positive degree
 */
 double argDeg(Complex z1, bool& div_by_zero) {
     double answer;
-    if (z1.real == 0) {
+    if (z1.real == 0 && z1.imag == 0) {
         div_by_zero = true;
         return z1.real;
     }
+    else if (z1.real == 0 && z1.imag > 0) {
+        return 90;  //90 degrees
+    }
+    else if (z1.real == 0 && z1.imag < 0) {
+        return -90;
+    }
+    else if (z1.real < 0 && z1.imag == 0) {
+        return 180;
+    }
+
+
     answer = atan(z1.imag / z1.real) * 180 / PI;
     if (z1.real < 0 && z1.imag > 0) {
         answer += 180;
