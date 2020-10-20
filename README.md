@@ -8,5 +8,6 @@ Repository for ENEL 487 Embedded and Real-Time Software Systems class
 - A3: Complex number calculator 2 [link](https://github.com/igmen-j/ENEL-487/tree/master/Assignments/A3)
 
 ## Labs
-- L1: Blinky [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab1)
-- L2: CLI on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab2)
+- L1: Blinky [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab1)  
+- L2: CLI on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab2)  
+- L3: CLI 2 on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab3)
