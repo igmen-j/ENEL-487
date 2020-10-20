@@ -1,7 +1,7 @@
 # Lab 3 - CLI 2 on the Target
 
 This lab builds on what we learned in [Lab 2](https://github.com/igmen-j/ENEL-487/blob/master/Labs/Lab2/).  
-Code: https://github.com/igmen-j/ENEL-487/blob/master/Labs/Lab3/Core/Src/main.c
+Code: https://github.com/igmen-j/ENEL-487/blob/master/Labs/Lab3/Core/Src/main.c  
 This lab, however, uses a non-blocking interrupts (ie HAL_UART_Receive_IT) and uses ANSI escape sequences
 
 ## Equipment and Software Requirements
