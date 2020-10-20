@@ -22,6 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
+
+#define CMD_PROMPT "=> "
 
 /* USER CODE END Includes */
 
@@ -44,6 +47,11 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 
+uint8_t cliBufferTX[40];
+uint8_t cliBufferRX[40];
+uint8_t infoTXBuffer[40];
+int cmd_counter = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -51,11 +59,35 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void reset_buffer(void);
+void showPrompt(void);
+bool buildCmd();
+void doCommand();
+void toggleLight();
+void displayHelp();
+void getState();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/*
+ * resets the buffer of TX, RX, user command
+ */
+void reset_buffer()
+{
+  for (int i = 0; i < 20; ++i) {
+	  cliBufferTX[i] = 0;
+	  cliBufferRX[i] = 0;
+  }
+}
+
+void reset_info_buffer()
+{
+  for (int i = 0; i < 20; ++i) {
+	  infoTXBuffer[i] = 0;
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -72,7 +104,8 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -90,35 +123,49 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  uint8_t info1[] = "ENEL 487 Lab 3: ";
+  uint8_t info2[] = "CLI Part 2 on the Target\r\n\r\n";
+  uint8_t timeInfo[] = "Seconds since running: ";
 
-  uint8_t cliBufferTX[20];
-  uint8_t cliBufferRX[20];
-  uint8_t cmd[20];
+  strcpy((char *) infoTXBuffer, (char *) info1);
+  HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
+  strcpy((char *) infoTXBuffer, info2);
+  HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
 
-  uint8_t info1[] = "ENEL 487 Lab 2:\r\n";
-  uint8_t info2[] = "CLI on the Target\r\n\r\n";
+  uint8_t counter = 0;
+  strcpy((char *) infoTXBuffer, (char *) timeInfo);
+  HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
 
-  uint8_t toggle[] = "toggle\r";
-  uint8_t help[] = "help\r";
-  uint8_t state[] = "state\r";
-  uint8_t backspace[] = "\b";
-  uint8_t double_enter[] = "\r\n\r\n";
-  int cmd_counter;
+  HAL_UART_Transmit(&huart3, "\x1b[8;r", 8, 1000);	//creates a scrollable cmd line
+  HAL_UART_Transmit(&huart3, "\x1b[8;0H", 9, 1000);	//moves the cursor to row eight
+  HAL_UART_Transmit(&huart3, "\x1b[1K", 7, 1000);	//clears the line
 
-  GPIO_PinState on_or_off;
+  showPrompt();
 
-  strcpy((char *) cliBufferTX, (char *) info1);
-  HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
-  strcpy((char *) cliBufferTX, info2);
-  HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+  HAL_UART_Receive_IT(&huart3, &cliBufferRX, 1);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  reset_buffer();
   while (1)
   {
+//	  HAL_UART_Transmit(&huart3, "\x1b[s", 8, 1000);
+//
+//	  HAL_UART_Transmit(&huart3, "\x1b[3;24H", 10, 1000);
+//	  sprintf(infoTXBuffer, "%d", counter);
+//	  HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
+//
+//
+//	  reset_info_buffer();
+//	  HAL_UART_Transmit(&huart3, "\x1b[u", 8, 1000);
+//	  HAL_Delay(1000);
+	  counter += 1;
+	  //showPrompt();
     /* USER CODE END WHILE */
+
 
     /* USER CODE BEGIN 3 */
   }
@@ -219,6 +266,122 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//uint8_t newLine = 1;
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef * husart) {
+	bool isEnterPressed = false;
+
+	isEnterPressed = buildCmd();
+
+	if (isEnterPressed) {
+		doCommand();
+		showPrompt();
+		//newLine = 1;
+	}
+
+
+	while (huart3.gState == HAL_UART_STATE_BUSY_RX){}
+	HAL_UART_Receive_IT (&huart3, &cliBufferRX, 1);
+
+}
+
+bool buildCmd() {
+	uint8_t backspace[] = "\b";
+
+	//check if user enters backspace
+	if (strcmp((char *) cliBufferRX, (char *) backspace) == 0){
+		cliBufferTX[cmd_counter] = 0;	//clears the element
+		--cmd_counter;
+
+		//if counter is less than zero, remain at zero so that it stays at the current line
+		if (cmd_counter < 0) {
+			cmd_counter = 0;
+		}
+		else {
+			HAL_UART_Transmit(&huart3, "\b \b", 3, 1000); //destructive backspace -- there may be a better way to do this
+		}
+	}
+	else {
+	//if not backspace, then enter it in the command line and increment it to next element and display
+		cliBufferTX[cmd_counter] = cliBufferRX[0];
+		++cmd_counter;
+		HAL_UART_Transmit(&huart3, cliBufferRX, 1, 1000);
+
+		if (cliBufferRX[0] == '\r') {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void showPrompt() {
+	HAL_UART_Transmit(&huart3, CMD_PROMPT, strlen((char *) 3), 1000);
+}
+
+void doCommand(){
+	uint8_t toggle[] = "toggle\r";
+	uint8_t help[] = "help\r";
+	uint8_t state[] = "state\r";
+	uint8_t double_enter[] = "\r\n";
+
+	if  (strcmp((char *) cliBufferTX, (char *) toggle) == 0) {
+		toggleLight();
+	}
+	else if (strcmp((char *) cliBufferTX, (char *) help) == 0){
+		//Displays helpful commands to CLI
+		displayHelp();
+	}
+	else if (strcmp((char *) cliBufferTX, (char *) state) == 0){
+	  //checks if the LED is on or off and lets the user know
+		getState();
+	}
+	else if (strcmp((char *) cliBufferTX, "\r") == 0) {
+		strcpy((char *) cliBufferTX, "");
+	}
+	else {
+		//user entered an invalid command
+		strcpy((char *) cliBufferTX, "\r\nInvalid command");
+	}
+
+	  //display the output
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, double_enter);
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+
+
+	reset_buffer();
+	cmd_counter = 0;
+}
+
+void toggleLight() {
+	strcpy((char *) cliBufferTX, "\r\nToggle light\r\n");
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);	//turns on the light
+}
+
+void displayHelp() {
+	strcpy((char *) cliBufferTX, "\r\nUseful Commands:\r\n");
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, "toggle : ");
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, "turns LED on or off\r\n");
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, "state : ");
+	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, "displays the state of the LED\r\n");
+}
+
+void getState() {
+	GPIO_PinState on_or_off;
+	on_or_off = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5);
+	if (on_or_off == GPIO_PIN_RESET) {
+		strcpy((char *) cliBufferTX, "\r\nLED is OFF\r\n");
+	}
+	else if (on_or_off == GPIO_PIN_SET) {
+		strcpy((char *) cliBufferTX, "\r\nLED is ON\r\n");
+	}
+}
+
+
 
 /* USER CODE END 4 */
 
