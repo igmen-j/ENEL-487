@@ -24,7 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 
-#define CMD_PROMPT "=> "
+#define CMD_PROMPT "=> "	//change this if you want a different prompt
 
 /* USER CODE END Includes */
 
@@ -72,7 +72,7 @@ void getState();
 /* USER CODE BEGIN 0 */
 
 /*
- * resets the buffer of TX, RX, user command
+ * Purpose: resets the buffer for RX and TX
  */
 void reset_buffer()
 {
@@ -82,6 +82,9 @@ void reset_buffer()
   }
 }
 
+/*
+ * Purpose: resets the buffer for the counter
+ */
 void reset_info_buffer()
 {
   for (int i = 0; i < 20; ++i) {
@@ -136,32 +139,33 @@ int main(void)
   strcpy((char *) infoTXBuffer, (char *) timeInfo);
   HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
 
-  HAL_UART_Transmit(&huart3, "\x1b[8;r", 8, 1000);	//creates a scrollable cmd line
-  HAL_UART_Transmit(&huart3, "\x1b[8;0H", 9, 1000);	//moves the cursor to row eight
-  HAL_UART_Transmit(&huart3, "\x1b[1K", 7, 1000);	//clears the line
+  HAL_UART_Transmit(&huart3, "\x1b[8;r", 5, 1000);	//creates a scrollable cmd line
+  HAL_UART_Transmit(&huart3, "\x1b[8;0H", 6, 1000);	//moves the cursor to row eight
+  HAL_UART_Transmit(&huart3, "\x1b[1K", 4, 1000);	//clears the line
 
   showPrompt();
 
-  HAL_UART_Receive_IT(&huart3, &cliBufferRX, 1);
+  //code above is to display info for the user
+
+  HAL_UART_Receive_IT(&huart3, &cliBufferRX, 1);	//start the non-blocking receive interrupt
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+  reset_info_buffer();
   reset_buffer();
+
+  uint8_t test[20];
   while (1)
   {
-//	  HAL_UART_Transmit(&huart3, "\x1b[s", 8, 1000);
-//
-//	  HAL_UART_Transmit(&huart3, "\x1b[3;24H", 10, 1000);
-//	  sprintf(infoTXBuffer, "%d", counter);
-//	  HAL_UART_Transmit(&huart3, infoTXBuffer, strlen((char *) infoTXBuffer), 1000);
-//
-//
-//	  reset_info_buffer();
-//	  HAL_UART_Transmit(&huart3, "\x1b[u", 8, 1000);
-//	  HAL_Delay(1000);
+	  HAL_UART_Transmit(&huart3, "\x1b[s", 3, 1000);	//saves the current position of the cursor
+	  HAL_UART_Transmit(&huart3, "\x1b[3;24f", 7, 1000); //moves the cursor to the coutner position
+	  reset_info_buffer();
+	  sprintf(test, "%d", counter);
+	  HAL_UART_Transmit(&huart3, test, strlen((char *) test), 1000);
+	  HAL_UART_Transmit(&huart3, "\x1b[u", 3, 1000); //returns the cursor back to the cmd line
+	  HAL_Delay(1000);
 	  counter += 1;
 	  //showPrompt();
     /* USER CODE END WHILE */
@@ -266,24 +270,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//uint8_t newLine = 1;
+/**
+ * Purpose: this function will be called when there is a receive interrupt
+ * 		Handles all of the command from user
+ */
 void HAL_UART_RxCpltCallback (UART_HandleTypeDef * husart) {
 	bool isEnterPressed = false;
-
-	isEnterPressed = buildCmd();
-
+	isEnterPressed = buildCmd();	//checks if enter key is pressed
 	if (isEnterPressed) {
 		doCommand();
 		showPrompt();
-		//newLine = 1;
 	}
 
-
 	while (huart3.gState == HAL_UART_STATE_BUSY_RX){}
-	HAL_UART_Receive_IT (&huart3, &cliBufferRX, 1);
-
+	HAL_UART_Receive_IT (&huart3, &cliBufferRX, 1); //restarts the receive interrupt
 }
 
+/*
+ * Purpose: Tracks the keys user has pressed and display them to the CLI
+ * Output: true if enter key is pressed and false otherwise
+ */
 bool buildCmd() {
 	uint8_t backspace[] = "\b";
 
@@ -314,10 +320,17 @@ bool buildCmd() {
 	return false;
 }
 
+/*
+ * Purpose: Displays the cmd line prompt
+ * See #define above if you would like to change it
+ */
 void showPrompt() {
 	HAL_UART_Transmit(&huart3, CMD_PROMPT, strlen((char *) 3), 1000);
 }
 
+/*
+ * Purpose: Handles the command the user has entered
+ */
 void doCommand(){
 	uint8_t toggle[] = "toggle\r";
 	uint8_t help[] = "help\r";
@@ -348,16 +361,23 @@ void doCommand(){
 	strcpy((char *) cliBufferTX, double_enter);
 	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
 
-
 	reset_buffer();
 	cmd_counter = 0;
 }
 
+/*
+ * Purpose: Toggles the LED
+ * Will run if the user enters "toggle"
+ */
 void toggleLight() {
 	strcpy((char *) cliBufferTX, "\r\nToggle light\r\n");
 	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);	//turns on the light
 }
 
+/*
+ * Purpose: Displays available commands to the user
+ * Will run if the user enters "help"
+ */
 void displayHelp() {
 	strcpy((char *) cliBufferTX, "\r\nUseful Commands:\r\n");
 	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
@@ -370,6 +390,10 @@ void displayHelp() {
 	strcpy((char *) cliBufferTX, "displays the state of the LED\r\n");
 }
 
+/*
+ * Purpose: Lets the user know if the LED is on or off
+ * Will run if the user enters "state"
+ */
 void getState() {
 	GPIO_PinState on_or_off;
 	on_or_off = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5);
@@ -380,7 +404,6 @@ void getState() {
 		strcpy((char *) cliBufferTX, "\r\nLED is ON\r\n");
 	}
 }
-
 
 
 /* USER CODE END 4 */
