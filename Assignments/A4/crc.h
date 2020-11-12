@@ -13,6 +13,11 @@
  * expressed or implied by its publication or distribution.
  **********************************************************************/
 
+/*
+ NOTE: This file is mostly unchanged except for adding ASSERT_VALUE definition
+	- For the automated unit test code of the assignment
+*/
+
 #ifndef _crc_h
 #define _crc_h
 
@@ -37,6 +42,7 @@ typedef unsigned short  crc;
 #define REFLECT_DATA		FALSE
 #define REFLECT_REMAINDER	FALSE
 #define CHECK_VALUE			0x29B1
+#define ASSERT_VALUE		0x44B	//For testing
 
 #elif defined(CRC16)
 
@@ -49,6 +55,7 @@ typedef unsigned short  crc;
 #define REFLECT_DATA		TRUE
 #define REFLECT_REMAINDER	TRUE
 #define CHECK_VALUE			0xBB3D
+#define ASSERT_VALUE		0xD17A	//For testing
 
 #elif defined(CRC32)
 
@@ -61,6 +68,7 @@ typedef unsigned long  crc;
 #define REFLECT_DATA		TRUE
 #define REFLECT_REMAINDER	TRUE
 #define CHECK_VALUE			0xCBF43926
+#define ASSERT_VALUE		0xC49E49	//For testing
 
 #else
 

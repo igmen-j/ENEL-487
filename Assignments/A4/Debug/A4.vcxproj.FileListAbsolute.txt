@@ -1,2 +1,4 @@
 C:\Users\igmen\Desktop\A4\Debug\A4.exe
 C:\Users\igmen\Desktop\A4\Debug\A4.pdb
+C:\Users\igmen\Desktop\ENEL 487\0-Labs_Asgn_in_GitHub\ENEL-487\Assignments\A4\Debug\A4.exe
+C:\Users\igmen\Desktop\ENEL 487\0-Labs_Asgn_in_GitHub\ENEL-487\Assignments\A4\Debug\A4.pdb
