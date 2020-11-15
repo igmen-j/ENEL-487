@@ -11,7 +11,6 @@
 #include "main.h"
 
 int16_t timer_start(TIM_HandleTypeDef);
-
 int16_t timer_stop(int16_t, TIM_HandleTypeDef);
 
 #endif /* INC_TIMER_H_ */
