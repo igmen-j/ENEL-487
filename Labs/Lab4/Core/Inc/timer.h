@@ -1,9 +1,10 @@
-/*
- * timer.h
+/******************************************************************
  *
- *  Created on: Oct 21, 2020
- *      Author: Justin Igmen
- */
+ * Filename: timer.h
+ *
+ * Description: A header file for the timer functions
+ *
+*******************************************************************/
 
 #ifndef INC_TIMER_H_
 #define INC_TIMER_H_

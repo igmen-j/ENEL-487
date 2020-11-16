@@ -1,9 +1,10 @@
-/*
- * cli.h
+/******************************************************************
  *
- *  Created on: Nov 14, 2020
- *      Author: igmen
- */
+ * Filename: cli.h
+ *
+ * Description: A header file for the CLI functions
+ *
+*******************************************************************/
 
 #ifndef INC_CLI_H_
 #define INC_CLI_H_

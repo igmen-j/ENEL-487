@@ -1,20 +1,49 @@
-/*
- * operations.c
+/******************************************************************
  *
- *  Created on: Nov 14, 2020
- *      Author: igmen
- */
+ * Filename:	operations.c
+ *
+ * Description: Functions for the operations
+ *
+*******************************************************************/
 
 #include "operations.h"
 
+/*********************************************************************
+ *
+ * Function:    random32bit()
+ *
+ * Description: Generates a random 32-bit integer
+ *
+ * Return: 		Random 32-bit integer
+ *
+ *********************************************************************/
 int32_t random32bit() {
 	return rand();
 }
 
+/*********************************************************************
+ *
+ * Function:    random64bit()
+ *
+ * Description: Generates a random 64-bit integer
+ *
+ * Return: 		Random 64-bit integer
+ *
+ *********************************************************************/
 int64_t random64bit() {
 	return rand();
 }
 
+/*********************************************************************
+ *
+ * Function:    process_ops()
+ *
+ * Description: Process operations and times how long each are ran
+ * 				Average the time 100 iterations of all of the operations
+ *
+ * Params: 		htim4 - Timer, average[9] - average time for iteration, array
+ *
+ *********************************************************************/
 void process_ops(TIM_HandleTypeDef htim4, int average[9]) {
 	int16_t startTime, endTime;
 	int32_t firstVal32, secondVal32, answer32;

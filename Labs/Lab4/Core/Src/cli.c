@@ -1,12 +1,20 @@
-/*
- * CLI.c
+/******************************************************************
  *
- *  Created on: Nov 14, 2020
- *      Author: igmen
- */
+ * Filename:	cli.c
+ *
+ * Description: Functions for the CLI
+ *
+*******************************************************************/
 
 #include "cli.h"
 
+/*********************************************************************
+ *
+ * Function:    reset_buffer()
+ *
+ * Description: Clears the buffer for the command, transmit and receive variables
+ *
+ *********************************************************************/
 void reset_buffer()
 {
   for (int i = 0; i < 20; ++i) {
@@ -16,6 +24,15 @@ void reset_buffer()
   }
 }
 
+/*********************************************************************
+ *
+ * Function:    display_intro()
+ *
+ * Description: Displays the title when CLI is opened
+ *
+ * Params: 		huart2 - UART
+ *
+ *********************************************************************/
 void display_intro(UART_HandleTypeDef huart2) {
 	uint8_t info1[] = "ENEL 487 Lab 4:\r\n";
 	uint8_t info2[] = "High-res Timing\r\n\r\n";
@@ -26,6 +43,15 @@ void display_intro(UART_HandleTypeDef huart2) {
 	HAL_UART_Transmit(&huart2, cliBufferTX, strlen((char *) cliBufferTX), 1000);
 }
 
+/*********************************************************************
+ *
+ * Function:    display_prompt()
+ *
+ * Description: Displays the prompt every line
+ *
+ * Params: 		huart2 - UART
+ *
+ *********************************************************************/
 void display_prompt(UART_HandleTypeDef huart2) {
 	cmd_counter = 0;
 	strcpy((char *) cliBufferTX, "> ");
@@ -33,6 +59,15 @@ void display_prompt(UART_HandleTypeDef huart2) {
 	reset_buffer();
 }
 
+/*********************************************************************
+ *
+ * Function:    getCommand()
+ *
+ * Description: Gets the received character input and builds the command
+ *
+ * Params: 		huart2 - UART
+ *
+ *********************************************************************/
 void getCommand(UART_HandleTypeDef huart2) {
 	uint8_t backspace[] = "\b";
 
@@ -64,6 +99,15 @@ void getCommand(UART_HandleTypeDef huart2) {
 	}
 }
 
+/*********************************************************************
+ *
+ * Function:    displayCommand()
+ *
+ * Description: Displays the command entered by the user
+ *
+ * Params: 		huart2 - UART, htim4 - TImer
+ *
+ *********************************************************************/
 void displayCommand(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim4) {
 	uint8_t toggle[] = "toggle\r";
 	uint8_t help[] = "help\r";

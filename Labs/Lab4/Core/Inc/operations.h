@@ -1,9 +1,10 @@
-/*
- * operations.h
+/******************************************************************
  *
- *  Created on: Nov 14, 2020
- *      Author: igmen
- */
+ * Filename: operations.h
+ *
+ * Description: A header file for the operations functions
+ *
+*******************************************************************/
 
 #ifndef INC_OPERATIONS_H_
 #define INC_OPERATIONS_H_
