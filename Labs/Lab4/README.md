@@ -6,13 +6,13 @@ Objectives:
 worst-case execution time (WCET).  
 3. Add a command to your CLI that runs your timing test suite.  
 
-Equipment and Software Requirements:
+### Equipment and Software Requirements:
 PC  
 STM32CubeIDE  
 Nucleo-64 development kit and USB cable  
 Com client such as Putty  
 
-Files:  
+### Files:  
 header files  
 main.c  
 cli.c - handles all cli related functions  
