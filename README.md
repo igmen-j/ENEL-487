@@ -13,3 +13,4 @@ Repository for ENEL 487 Embedded and Real-Time Software Systems class
 - L2: CLI on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab2)  
 - L3: CLI 2 on the Target [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab3) 
 - L4: High-res Timing [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab4)  
+- L5: RTOS Introduction [link](https://github.com/igmen-j/ENEL-487/tree/master/Labs/Lab5)
