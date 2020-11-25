@@ -59,14 +59,15 @@ void showPrompt(UART_HandleTypeDef huart3) {
 
 bool buildCmd(UART_HandleTypeDef huart3) {
 	uint8_t backspace[] = "\b";
+	uint32_t test = 0;
 	reset_buffer();
 	while (cliBufferRX[0] != '\r'){
-		if (HAL_UART_Receive(&huart3, cliBufferRX, 1, 10000) == HAL_OK) {
+		if (HAL_UART_Receive(&huart3, cliBufferRX, 1, 1000) == HAL_OK) {
 			//check if user enters backspace
 			if (strcmp((char *) cliBufferRX, (char *) backspace) == 0){
 				cliBufferTX[cmd_counter] = 0;	//clears the element
 				--cmd_counter;
-
+				test = cmd_counter;
 				//if counter is less than zero, remain at zero so that it stays at the current line
 				if (cmd_counter < 0) {
 					cmd_counter = 0;
@@ -98,9 +99,12 @@ void doCommand(UART_HandleTypeDef huart3){
 	uint8_t period[] = "period";
 	uint8_t double_enter[] = "\r\n";
 	uint32_t correct_input;
-	uint32_t period_value_temp = 0;
+	int period_value_temp = 0;
 
-	correct_input = sscanf (cliBufferTX, "%s %u", cmd, &period_value_temp);
+	correct_input = sscanf (cliBufferTX, "%s %i", cmd, &period_value_temp);
+	if (period_value_temp <= 0) {
+		period_value_temp = 1;
+	}
 
 	if  (strcmp((char *) cliBufferTX, (char *) toggle) == 0) {
 		//toggleLight();
@@ -158,6 +162,6 @@ void displayHelp(UART_HandleTypeDef huart3) {
 }
 
 void updatePeriod(UART_HandleTypeDef huart3) {
-	strcpy((char *) cliBufferTX, "\r\npls work");
-	HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
+	strcpy((char *) cliBufferTX, "\r\nUpdating the period...");
+	//HAL_UART_Transmit(&huart3, cliBufferTX, strlen((char *) cliBufferTX), 1000);
 }

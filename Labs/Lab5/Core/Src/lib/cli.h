@@ -18,7 +18,7 @@ uint8_t cliBufferTX[30];
 uint8_t cliBufferRX[30];
 uint8_t cmd[30];
 uint32_t period_value;
-uint32_t cmd_counter;
+int cmd_counter;
 
 void reset_buffer();
 void display_intro(UART_HandleTypeDef);

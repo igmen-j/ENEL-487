@@ -50,11 +50,18 @@ const osThreadAttr_t blink01_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 128 * 4
 };
-/* Definitions for receiver */
-osThreadId_t receiverHandle;
-const osThreadAttr_t receiver_attributes = {
-  .name = "receiver",
+/* Definitions for TransmitReceive */
+osThreadId_t TransmitReceiveHandle;
+const osThreadAttr_t TransmitReceive_attributes = {
+  .name = "TransmitReceive",
   .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+/* Definitions for CLI */
+osThreadId_t CLIHandle;
+const osThreadAttr_t CLI_attributes = {
+  .name = "CLI",
+  .priority = (osPriority_t) osPriorityBelowNormal,
   .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
@@ -66,7 +73,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 void StartBlink01(void *argument);
-void Receiver(void *argument);
+void RxTx(void *argument);
+void UpdateCLI(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -107,9 +115,17 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  uint8_t temp[20];
   period_value = 500;
-//  display_intro(huart3);	//****************************************************************
-//  reset_buffer();
+  sprintf(temp, "period:  %i", period_value);
+  HAL_UART_Transmit(&huart3, temp, strlen((char *) temp), 1000);
+  HAL_UART_Transmit(&huart3, "\x1b[8;r", 5, 1000);	//creates a scrollable cmd line
+  HAL_UART_Transmit(&huart3, "\x1b[8;0H", 6, 1000);	//moves the cursor to row eight
+  HAL_UART_Transmit(&huart3, "\x1b[1K", 4, 1000);	//clears the line
+
+  showPrompt(huart3);
+  //reset_info_buffer();
+  reset_buffer();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -135,8 +151,11 @@ int main(void)
   /* creation of blink01 */
   blink01Handle = osThreadNew(StartBlink01, NULL, &blink01_attributes);
 
-  /* creation of receiver */
-  receiverHandle = osThreadNew(Receiver, NULL, &receiver_attributes);
+  /* creation of TransmitReceive */
+  TransmitReceiveHandle = osThreadNew(RxTx, NULL, &TransmitReceive_attributes);
+
+  /* creation of CLI */
+  CLIHandle = osThreadNew(UpdateCLI, NULL, &CLI_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -287,9 +306,8 @@ void StartBlink01(void *argument)
   /* Infinite loop */
   for(;;)
   {
-
 	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-    osDelay(period_value);	//allows the scheduler to run other tasks while waiting
+	  osDelay(period_value);	//allows the scheduler to run other tasks while waiting
   }
 
   //In case we accidentally exit the task loop
@@ -297,16 +315,16 @@ void StartBlink01(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_Receiver */
+/* USER CODE BEGIN Header_RxTx */
 /**
-* @brief Function implementing the receiver thread.
+* @brief Function implementing the TransmitReceive thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_Receiver */
-void Receiver(void *argument)
+/* USER CODE END Header_RxTx */
+void RxTx(void *argument)
 {
-  /* USER CODE BEGIN Receiver */
+  /* USER CODE BEGIN RxTx */
   /* Infinite loop */
   for(;;)
   {
@@ -318,7 +336,36 @@ void Receiver(void *argument)
 	}
     osDelay(1);
   }
-  /* USER CODE END Receiver */
+  /* USER CODE END RxTx */
+}
+
+/* USER CODE BEGIN Header_UpdateCLI */
+/**
+* @brief Function implementing the CLI thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_UpdateCLI */
+void UpdateCLI(void *argument)
+{
+  /* USER CODE BEGIN UpdateCLI */
+	uint8_t test[20];
+	uint32_t oldVal = 0;
+  /* Infinite loop */
+  for(;;)
+  {
+	  if (oldVal != period_value){
+		HAL_UART_Transmit(&huart3, "\x1b[s", 3, 1000);	//saves the current position of the cursor
+		HAL_UART_Transmit(&huart3, "\x1b[0;0f", 7, 1000); //moves the cursor to the counter position
+		HAL_UART_Transmit(&huart3, "\x1b[1K", 4, 1000);	//clears the line
+		sprintf(test, "period: %i  ", period_value);
+		HAL_UART_Transmit(&huart3, test, strlen((char *) test), 1000);
+		HAL_UART_Transmit(&huart3, "\x1b[u", 3, 1000); //returns the cursor back to the cmd line
+		oldVal = period_value;
+		osDelay(1);
+	  }
+  }
+  /* USER CODE END UpdateCLI */
 }
 
 /**
