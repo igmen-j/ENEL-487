@@ -34,6 +34,25 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define FSM_MODE 			1000
+#define SCM_MODE 			2000
+#define ATM					100
+
+#define FSM_ON 				1500
+#define FSM_OFF 			500
+
+#define PRI_GREEN_TIME 		83500
+#define PRI_YELLOW_TIME		3500
+#define SEC_GREEN_TIME		28000
+#define SEC_YELLOW_TIME		3500
+#define ALL_RED_TIME		6000
+
+#define PRI_WALK_TIME		70500
+#define	PRI_WALK_WARN_TIME	13000
+#define	PRI_DONT_WALK_TIME	41000
+#define SEC_WALK_TIME		93000
+#define	SEC_WALK_WARN_TIME	11500
+#define	SEC_DONT_WALK_TIME	20000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,24 +63,24 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart3;
 
-/* Definitions for blink01 */
-osThreadId_t blink01Handle;
-const osThreadAttr_t blink01_attributes = {
-  .name = "blink01",
+/* Definitions for StateController */
+osThreadId_t StateControllerHandle;
+const osThreadAttr_t StateController_attributes = {
+  .name = "StateController",
   .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 128 * 4
 };
-/* Definitions for RX_CLI */
-osThreadId_t RX_CLIHandle;
-const osThreadAttr_t RX_CLI_attributes = {
-  .name = "RX_CLI",
+/* Definitions for CLI */
+osThreadId_t CLIHandle;
+const osThreadAttr_t CLI_attributes = {
+  .name = "CLI",
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
-/* Definitions for Status_CLI */
-osThreadId_t Status_CLIHandle;
-const osThreadAttr_t Status_CLI_attributes = {
-  .name = "Status_CLI",
+/* Definitions for Status_Update */
+osThreadId_t Status_UpdateHandle;
+const osThreadAttr_t Status_Update_attributes = {
+  .name = "Status_Update",
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
@@ -89,11 +108,13 @@ int counter = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-void StartBlink01(void *argument);
-void RX_CLI_Task(void *argument);
-void Status_CLI_Task(void *argument);
+void State_Controller_Task(void *argument);
+void CLI_Task(void *argument);
+void Status_Update_Task(void *argument);
 
 /* USER CODE BEGIN PFP */
+
+void turnOffAllLights();
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -142,8 +163,7 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_GPIO_WritePin(GPIOA, Red1_Pin|Yellow1_Pin|Green1_Pin|Blue1_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin, GPIO_PIN_SET);
+  turnOffAllLights();
 
   //Clear the screen
   strcpy ( cliBufferTX, "\x1b[2J" );
@@ -200,14 +220,14 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of blink01 */
-  blink01Handle = osThreadNew(StartBlink01, NULL, &blink01_attributes);
+  /* creation of StateController */
+  StateControllerHandle = osThreadNew(State_Controller_Task, NULL, &StateController_attributes);
 
-  /* creation of RX_CLI */
-  RX_CLIHandle = osThreadNew(RX_CLI_Task, NULL, &RX_CLI_attributes);
+  /* creation of CLI */
+  CLIHandle = osThreadNew(CLI_Task, NULL, &CLI_attributes);
 
-  /* creation of Status_CLI */
-  Status_CLIHandle = osThreadNew(Status_CLI_Task, NULL, &Status_CLI_attributes);
+  /* creation of Status_Update */
+  Status_UpdateHandle = osThreadNew(Status_Update_Task, NULL, &Status_Update_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -345,6 +365,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void turnOffAllLights() {
+	HAL_GPIO_WritePin(GPIOA, Red1_Pin|Yellow1_Pin|Green1_Pin|Blue1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin, GPIO_PIN_SET);
+}
+
 void printString (const char* message)
 {
     int i=0;
@@ -409,23 +435,24 @@ void handleCommand(char command[]){
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartBlink01 */
+/* USER CODE BEGIN Header_State_Controller_Task */
 /**
-  * @brief  Function implementing the blink01 thread.
+  * @brief  Function implementing the StateController thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartBlink01 */
-void StartBlink01(void *argument)
+/* USER CODE END Header_State_Controller_Task */
+void State_Controller_Task(void *argument)
 {
   /* USER CODE BEGIN 5 */
   uint16_t cliMessage;
   uint16_t statusMessage;
   osStatus_t status;
-  uint16_t period = 1000;
+  uint16_t state = SCM_MODE;
+  uint16_t period = 10;
 
   //Send a status message straight away
-  statusMessage = period;
+  statusMessage = state;
   if(osMessageQueuePut(Status_QueueHandle, &statusMessage, 1U, 0U)!= osOK)
   {
     Error_Handler();
@@ -439,7 +466,14 @@ void StartBlink01(void *argument)
 	if(status == osOK)
 	{
 		//This means a message has been received
-		period = cliMessage;
+		if (cliMessage <= ATM) {
+			period = cliMessage;
+		}
+
+		if (cliMessage == FSM_MODE || cliMessage == FSM_MODE){
+			state = cliMessage;
+		}
+
 		statusMessage = cliMessage;
 
 		if(osMessageQueuePut(Status_QueueHandle, &statusMessage, 1U, 0U)!= osOK)
@@ -449,104 +483,133 @@ void StartBlink01(void *argument)
 
 	}
 
-	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-    osDelay(period);
+	if (state == FSM_MODE){
+		HAL_GPIO_TogglePin(GPIOA, Red1_Pin);
+		HAL_GPIO_TogglePin(GPIOB, Red2_Pin);
+		osDelay(FSM_ON * period);
+		HAL_GPIO_TogglePin(GPIOA, Red1_Pin);
+		HAL_GPIO_TogglePin(GPIOB, Red2_Pin);
+		osDelay(FSM_OFF * period);
+	}
+	else if (state == SCM_MODE){	//reset is on set is off
+		turnOffAllLights();
+		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_RESET);
+		osDelay(ALL_RED_TIME / period);
+
+		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, Green1_Pin, GPIO_PIN_RESET);
+		osDelay(PRI_GREEN_TIME / period);
+
+		HAL_GPIO_WritePin(GPIOA, Green1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, Yellow1_Pin, GPIO_PIN_RESET);
+		osDelay(PRI_YELLOW_TIME / period);
+
+		HAL_GPIO_WritePin(GPIOA, Yellow1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_RESET);
+		osDelay(ALL_RED_TIME / period);
+
+		//secondary
+		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOB, Green2_Pin, GPIO_PIN_RESET);
+		osDelay(SEC_GREEN_TIME / period);
+
+		HAL_GPIO_WritePin(GPIOB, Green2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOB, Yellow2_Pin, GPIO_PIN_RESET);
+		osDelay(SEC_YELLOW_TIME / period);
+
+		HAL_GPIO_WritePin(GPIOB, Yellow2_Pin, GPIO_PIN_SET);
+	}
   }
 
   osThreadTerminate(NULL);
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_RX_CLI_Task */
+/* USER CODE BEGIN Header_CLI_Task */
 /**
-* @brief Function implementing the RX_CLI thread.
+* @brief Function implementing the CLI thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_RX_CLI_Task */
-void RX_CLI_Task(void *argument)
+/* USER CODE END Header_CLI_Task */
+void CLI_Task(void *argument)
 {
-  /* USER CODE BEGIN RX_CLI_Task */
-  uint16_t cliMessage;
+  /* USER CODE BEGIN CLI_Task */
+	uint16_t cliMessage;
   /* Infinite loop */
-  for(;;)
-  {
-    //This starts the process of receiving the data.
-    if ((HAL_UART_Receive ( &huart3, &cliRXChar, 1, 10) == HAL_OK))
-    {
+	for(;;)
+	{
+		//This starts the process of receiving the data.
+		if ((HAL_UART_Receive ( &huart3, &cliRXChar, 1, 10) == HAL_OK))
+		{
+			//Check if this is a complete line.
+			isCompleteLine =  returnLineOrPartialLine (cliBufferRX, cliRXChar);
 
-    	//Check if this is a complete line.
-    	isCompleteLine =  returnLineOrPartialLine (cliBufferRX, cliRXChar);
+			if(isCompleteLine)
+			{
+				handleCommand(cliBufferRX); //Empty for now.
 
-    	if(isCompleteLine)
-    	{
-    		handleCommand(cliBufferRX); //Empty for now.
+				//Assume that things are fine :)
+				printStringBlocking("\r\n");
+				printStringBlocking(PROMPT);
 
-   	    	//Assume that things are fine :)
-   	     	printStringBlocking("\r\n");
-   	    	printStringBlocking(PROMPT);
+				//Send a message to the controller.
 
-   	    	//Send a message to the controller.
-
-   	    	//cliMessage -=100;
-   	    	if(osMessageQueuePut(CLI_QueueHandle, &cliMessage, 1U, 0U)!= osOK)
-   	        {
-   	          Error_Handler();
-   	        }
-
-
-   	    }
-    }
-    osDelay(50);
+				//cliMessage -=100;
+				if(osMessageQueuePut(CLI_QueueHandle, &cliMessage, 1U, 0U)!= osOK)
+				{
+				  Error_Handler();
+				}
+			}
+		}
+		osDelay(50);
 
   }
-  /* USER CODE END RX_CLI_Task */
+  /* USER CODE END CLI_Task */
 }
 
-/* USER CODE BEGIN Header_Status_CLI_Task */
+/* USER CODE BEGIN Header_Status_Update_Task */
 /**
-* @brief Function implementing the Status_CLI thread.
+* @brief Function implementing the Status_Update thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_Status_CLI_Task */
-void Status_CLI_Task(void *argument)
+/* USER CODE END Header_Status_Update_Task */
+void Status_Update_Task(void *argument)
 {
-  /* USER CODE BEGIN Status_CLI_Task */
+  /* USER CODE BEGIN Status_Update_Task */
 
-  uint16_t statusMessage;
-  uint16_t period;
-  osStatus_t status;
+	uint16_t statusMessage;
+	uint16_t period;
+	osStatus_t status;
 
-  /* Infinite loop */
-  for(;;)
-  {
+	/* Infinite loop */
+	for(;;)
+	{
+		status = osMessageQueueGet(Status_QueueHandle, &statusMessage, NULL, 0U );
+		if(status == osOK)
+		{
 
-	  status = osMessageQueueGet(Status_QueueHandle, &statusMessage, NULL, 0U );
-	  if(status == osOK)
-	  {
+			period = statusMessage;
+		}
+		//For some damn reason it locks if I send this twice in a row.
+		//	static const int32_t STR_SIZE = 96;
+		static char outstring[50];
 
-		  period = statusMessage;
-	  }
-	  //For some damn reason it locks if I send this twice in a row.
-	  //	static const int32_t STR_SIZE = 96;
-	  static char outstring[50];
+		printStringBlocking(SAVE_CURSOR);
+		printStringBlocking("\x1b[1;1H");
+		//printStringBlocking(GOTO_RC(1,1));
 
-	  printStringBlocking(SAVE_CURSOR);
-	  printStringBlocking("\x1b[1;1H");
-	  //printStringBlocking(GOTO_RC(1,1));
+		//GOTO_RC(1,1);
+		snprintf(outstring, 50,"period:% 5d \r\n",period);
+		printStringBlocking(outstring);
+		printStringBlocking(RESTORE_CURSOR);
 
-	  //GOTO_RC(1,1);
-	  snprintf(outstring, 50,"period:% 5d \r\n",period);
-	  printStringBlocking(outstring);
-	  printStringBlocking(RESTORE_CURSOR);
-
-	  osDelay(1000);
-
-
-
-  }
-  /* USER CODE END Status_CLI_Task */
+		osDelay(1000);
+	}
+  /* USER CODE END Status_Update_Task */
 }
 
 /**

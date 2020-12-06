@@ -2,7 +2,7 @@
 FREERTOS.FootprintOK=true
 FREERTOS.IPParameters=Tasks01,FootprintOK,Queues01
 FREERTOS.Queues01=CLI_Queue,16,uint16_t,0,Dynamic,NULL,NULL;Status_Queue,16,uint16_t,0,Dynamic,NULL,NULL
-FREERTOS.Tasks01=blink01,32,128,StartBlink01,Default,NULL,Dynamic,NULL,NULL;RX_CLI,8,128,RX_CLI_Task,Default,NULL,Dynamic,NULL,NULL;Status_CLI,8,128,Status_CLI_Task,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.Tasks01=StateController,32,128,State_Controller_Task,Default,NULL,Dynamic,NULL,NULL;CLI,8,128,CLI_Task,Default,NULL,Dynamic,NULL,NULL;Status_Update,8,128,Status_Update_Task,Default,NULL,Dynamic,NULL,NULL
 File.Version=6
 KeepUserPlacement=false
 Mcu.Family=STM32F1
