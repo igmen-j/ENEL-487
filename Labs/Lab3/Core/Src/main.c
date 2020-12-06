@@ -316,7 +316,6 @@ bool buildCmd() {
 			return true;
 		}
 	}
-
 	return false;
 }
 

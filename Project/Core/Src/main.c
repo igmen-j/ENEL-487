@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "./usr/CLI.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,14 +44,44 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart3;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .priority = (osPriority_t) osPriorityNormal,
+/* Definitions for blink01 */
+osThreadId_t blink01Handle;
+const osThreadAttr_t blink01_attributes = {
+  .name = "blink01",
+  .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 128 * 4
 };
+/* Definitions for RX_CLI */
+osThreadId_t RX_CLIHandle;
+const osThreadAttr_t RX_CLI_attributes = {
+  .name = "RX_CLI",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
+/* Definitions for Status_CLI */
+osThreadId_t Status_CLIHandle;
+const osThreadAttr_t Status_CLI_attributes = {
+  .name = "Status_CLI",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
+/* Definitions for CLI_Queue */
+osMessageQueueId_t CLI_QueueHandle;
+const osMessageQueueAttr_t CLI_Queue_attributes = {
+  .name = "CLI_Queue"
+};
+/* Definitions for Status_Queue */
+osMessageQueueId_t Status_QueueHandle;
+const osMessageQueueAttr_t Status_Queue_attributes = {
+  .name = "Status_Queue"
+};
 /* USER CODE BEGIN PV */
+uint8_t cliBufferTX[MAX_USER_INPUT];
+uint8_t cliRXChar;
+uint8_t cliBufferRX[MAX_USER_INPUT];
+bool isCompleteLine = false;
+int counter = 0;
+
 
 /* USER CODE END PV */
 
@@ -58,9 +89,20 @@ const osThreadAttr_t defaultTask_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-void StartDefaultTask(void *argument);
+void StartBlink01(void *argument);
+void RX_CLI_Task(void *argument);
+void Status_CLI_Task(void *argument);
 
 /* USER CODE BEGIN PFP */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_USART3_UART_Init(void);
+void StartBlink01(void *argument);
+void RX_CLI_Task(void *argument);
+void Status_CLI_Task(void *argument);
 
 /* USER CODE END PFP */
 
@@ -76,7 +118,7 @@ void StartDefaultTask(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	cmd_counter = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -100,6 +142,35 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_GPIO_WritePin(GPIOA, Red1_Pin|Yellow1_Pin|Green1_Pin|Blue1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin, GPIO_PIN_SET);
+
+  //Clear the screen
+  strcpy ( cliBufferTX, "\x1b[2J" );
+
+
+  printStringBlocking("\x1b[2J");
+  printStringBlocking(CLEAR_SCREEN);   // clear entire screen
+  HAL_Delay(500);
+  //Print the welcome message
+  welcomeMessage();
+  HAL_Delay(2000);
+
+  //Clear the screen
+  printStringBlocking(CLEAR_SCREEN);   // clear entire screen
+  printStringBlocking("\x1b[5;1H");
+  //printStringBlocking(GOTO_RC(5,1)); // cursor to row#, col#
+//  char * escape = GOTO_RC(5,1);
+ // int val = &escape;
+
+  printStringBlocking("\x1b[5;r");
+//  printStringBlocking(SET_SCROLL_ROW_TO_BOTTOM(5)); // set scrolling region
+                                               // to row#->bottom
+  printStringBlocking("\x1b[5;1H");
+  //printStringBlocking(GOTO_RC(5,1)); // cursor to row#, col# (must call this
+     	                                 // again, because the set scroll
+  printStringBlocking(PROMPT);
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -117,13 +188,26 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of CLI_Queue */
+  CLI_QueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &CLI_Queue_attributes);
+
+  /* creation of Status_Queue */
+  Status_QueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &Status_Queue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of blink01 */
+  blink01Handle = osThreadNew(StartBlink01, NULL, &blink01_attributes);
+
+  /* creation of RX_CLI */
+  RX_CLIHandle = osThreadNew(RX_CLI_Task, NULL, &RX_CLI_attributes);
+
+  /* creation of Status_CLI */
+  Status_CLIHandle = osThreadNew(Status_CLI_Task, NULL, &Status_CLI_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -135,6 +219,9 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -219,33 +306,247 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5|Red1_Pin|Yellow1_Pin|Green1_Pin
+                          |Blue1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA5 Red1_Pin Yellow1_Pin Green1_Pin
+                           Blue1_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_5|Red1_Pin|Yellow1_Pin|Green1_Pin
+                          |Blue1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Red2_Pin Yellow2_Pin Green2_Pin Blue2_Pin */
+  GPIO_InitStruct.Pin = Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
+void printString (const char* message)
+{
+    int i=0;
+    HAL_StatusTypeDef	st;
+
+    //Have to wait for the last transmission to go.
+    while(huart3.gState == HAL_UART_STATE_BUSY_TX){}
+
+	for (const char* p = message; *p; ++p) {
+    	cliBufferTX[i] =  *p;
+    	i++;
+    }
+	st = HAL_UART_Transmit_IT(&huart3, cliBufferTX, i);
+	if (st != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+}
+
+void printStringBlocking (const char* message)
+{
+    int i=0;
+    HAL_StatusTypeDef	st;
+
+    //Have to wait for the last transmission to go.
+    while(huart3.gState == HAL_UART_STATE_BUSY_TX){}
+
+	for (const char* p = message; *p; ++p) {
+    	cliBufferTX[i] =  *p;
+    	i++;
+    }
+	st = HAL_UART_Transmit(&huart3, cliBufferTX, i, 1000);
+	if (st != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+}
+
+/*
+ * Send a byte
+ */
+void sendByte (char msgChar)
+{
+    while(huart3.gState == HAL_UART_STATE_BUSY_TX){}
+	HAL_UART_Transmit(&huart3, &msgChar, 1,1000);
+
+}
+
+void handleCommand(char command[]){
+	uint8_t toggle[] = "toggle\r";
+	uint8_t help[] = "help\r";
+	uint8_t state[] = "state\r";
+
+	if  (strcmp((char *) command, (char *) toggle) == 0) {
+		printStringBlocking("\r\nToggle light\r\n");
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);	//turns on the light
+	}
+}
+
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartBlink01 */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the blink01 thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartBlink01 */
+void StartBlink01(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  uint16_t cliMessage;
+  uint16_t statusMessage;
+  osStatus_t status;
+  uint16_t period = 1000;
+
+  //Send a status message straight away
+  statusMessage = period;
+  if(osMessageQueuePut(Status_QueueHandle, &statusMessage, 1U, 0U)!= osOK)
+  {
+    Error_Handler();
+  }
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+
+	//check for messages but do not block.
+	status = osMessageQueueGet(CLI_QueueHandle, &cliMessage, NULL, 0U );
+	if(status == osOK)
+	{
+		//This means a message has been received
+		period = cliMessage;
+		statusMessage = cliMessage;
+
+		if(osMessageQueuePut(Status_QueueHandle, &statusMessage, 1U, 0U)!= osOK)
+	    {
+		  Error_Handler();
+		}
+
+	}
+
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+    osDelay(period);
   }
+
+  osThreadTerminate(NULL);
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_RX_CLI_Task */
+/**
+* @brief Function implementing the RX_CLI thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_RX_CLI_Task */
+void RX_CLI_Task(void *argument)
+{
+  /* USER CODE BEGIN RX_CLI_Task */
+  uint16_t cliMessage;
+  /* Infinite loop */
+  for(;;)
+  {
+    //This starts the process of receiving the data.
+    if ((HAL_UART_Receive ( &huart3, &cliRXChar, 1, 10) == HAL_OK))
+    {
+
+    	//Check if this is a complete line.
+    	isCompleteLine =  returnLineOrPartialLine (cliBufferRX, cliRXChar);
+
+    	if(isCompleteLine)
+    	{
+    		handleCommand(cliBufferRX); //Empty for now.
+
+   	    	//Assume that things are fine :)
+   	     	printStringBlocking("\r\n");
+   	    	printStringBlocking(PROMPT);
+
+   	    	//Send a message to the controller.
+
+   	    	//cliMessage -=100;
+   	    	if(osMessageQueuePut(CLI_QueueHandle, &cliMessage, 1U, 0U)!= osOK)
+   	        {
+   	          Error_Handler();
+   	        }
+
+
+   	    }
+    }
+    osDelay(50);
+
+  }
+  /* USER CODE END RX_CLI_Task */
+}
+
+/* USER CODE BEGIN Header_Status_CLI_Task */
+/**
+* @brief Function implementing the Status_CLI thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Status_CLI_Task */
+void Status_CLI_Task(void *argument)
+{
+  /* USER CODE BEGIN Status_CLI_Task */
+
+  uint16_t statusMessage;
+  uint16_t period;
+  osStatus_t status;
+
+  /* Infinite loop */
+  for(;;)
+  {
+
+	  status = osMessageQueueGet(Status_QueueHandle, &statusMessage, NULL, 0U );
+	  if(status == osOK)
+	  {
+
+		  period = statusMessage;
+	  }
+	  //For some damn reason it locks if I send this twice in a row.
+	  //	static const int32_t STR_SIZE = 96;
+	  static char outstring[50];
+
+	  printStringBlocking(SAVE_CURSOR);
+	  printStringBlocking("\x1b[1;1H");
+	  //printStringBlocking(GOTO_RC(1,1));
+
+	  //GOTO_RC(1,1);
+	  snprintf(outstring, 50,"period:% 5d \r\n",period);
+	  printStringBlocking(outstring);
+	  printStringBlocking(RESTORE_CURSOR);
+
+	  osDelay(1000);
+
+
+
+  }
+  /* USER CODE END Status_CLI_Task */
 }
 
 /**
