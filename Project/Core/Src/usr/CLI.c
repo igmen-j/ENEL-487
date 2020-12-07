@@ -1,39 +1,13 @@
 /*
  * CLI.c
  *
- *  Created on: Dec 2, 2020
- *      Author: igmen
+ * Author: Justin Igmen
  */
 
 #include "CLI.h"
 
-char* GOTO_RC(uint32_t row, uint32_t col) {
-	col = 5;
-	char escape[] = "\x1b[";
-	char* return_val = escape;
-	return_val += sizeof(char) * 2;
-	*return_val = (char *)row;
-	return_val += sizeof(char);
-	*return_val = ';';
-	return_val += sizeof(char);
-	*return_val = (char *)col;
-	return_val += sizeof(char);
-	*return_val = 'H';
-	return_val += sizeof(char) * 5;
-
-	//strcat((char *)escape, row + '\0');
-	//strcat((char *)escape, col + '\0');
-
-	//sprintf(escape, "\x1b[%i;%iH", (char*)row, (char*)col);
-	return return_val;
-}
-char* SET_SCROLL_ROW_TO_BOTTOM(uint32_t row) {
-	char * escape;
-	sprintf(escape, "\x1b[%i;r", row);
-	return escape[0];
-}
-
 void welcomeMessage() {
+	printStringBlocking("\x1b[0;0H");
 	printStringBlocking("ENEL 487 Project\r\n");
 	printStringBlocking("Justin Igmen");
 }
@@ -63,6 +37,7 @@ bool returnLineOrPartialLine (uint8_t* cliBufferRX, uint8_t cliRXChar) {
 		sendByte(cliRXChar);
 
 		if (cliRXChar == '\r') {
+			cmd_counter = 0;
 			return true;
 		}
 	}

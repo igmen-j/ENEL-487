@@ -16,6 +16,21 @@
   *
   ******************************************************************************
   */
+
+
+/*******************************************************************************
+ *
+ * Author: Justin Igmen
+ * Class: ENEL 487
+ * SID: 200364880
+ *
+ * This program simulates a traffic light controller.
+ *
+ * Credits: Trevor Douglas for providing part of the main.c file
+ *
+ *******************************************************************************/
+
+
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -25,6 +40,8 @@
 /* USER CODE BEGIN Includes */
 #include "./usr/CLI.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +51,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define DEFAULT_PERIOD		1
+
 #define FSM_MODE 			1000
 #define SCM_MODE 			2000
 #define ATM					100
@@ -47,6 +66,7 @@
 #define SEC_YELLOW_TIME		3500
 #define ALL_RED_TIME		6000
 
+#define WALK_BLINK_TIME		1000
 #define PRI_WALK_TIME		70500
 #define	PRI_WALK_WARN_TIME	13000
 #define	PRI_DONT_WALK_TIME	41000
@@ -61,6 +81,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart3;
 
 /* Definitions for StateController */
@@ -100,7 +122,7 @@ uint8_t cliRXChar;
 uint8_t cliBufferRX[MAX_USER_INPUT];
 bool isCompleteLine = false;
 int counter = 0;
-
+uint16_t timer;
 
 /* USER CODE END PV */
 
@@ -108,6 +130,7 @@ int counter = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM2_Init(void);
 void State_Controller_Task(void *argument);
 void CLI_Task(void *argument);
 void Status_Update_Task(void *argument);
@@ -161,14 +184,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
   turnOffAllLights();
 
   //Clear the screen
   strcpy ( cliBufferTX, "\x1b[2J" );
-
-
   printStringBlocking("\x1b[2J");
   printStringBlocking(CLEAR_SCREEN);   // clear entire screen
   HAL_Delay(500);
@@ -178,17 +199,10 @@ int main(void)
 
   //Clear the screen
   printStringBlocking(CLEAR_SCREEN);   // clear entire screen
-  printStringBlocking("\x1b[5;1H");
-  //printStringBlocking(GOTO_RC(5,1)); // cursor to row#, col#
-//  char * escape = GOTO_RC(5,1);
- // int val = &escape;
+  printStringBlocking("\x1b[5;1H");		// cursor to row#, col#
 
-  printStringBlocking("\x1b[5;r");
-//  printStringBlocking(SET_SCROLL_ROW_TO_BOTTOM(5)); // set scrolling region
-                                               // to row#->bottom
-  printStringBlocking("\x1b[5;1H");
-  //printStringBlocking(GOTO_RC(5,1)); // cursor to row#, col# (must call this
-     	                                 // again, because the set scroll
+  printStringBlocking("\x1b[5;r");	// set scrolling region
+  printStringBlocking("\x1b[5;1H");// cursor to row#, col#
   printStringBlocking(PROMPT);
 
   /* USER CODE END 2 */
@@ -287,6 +301,51 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 8000;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 65535;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -366,31 +425,21 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+  * @brief Turns off all the LED to reset
+  * @param None
+  * @retval None
+  */
 void turnOffAllLights() {
 	HAL_GPIO_WritePin(GPIOA, Red1_Pin|Yellow1_Pin|Green1_Pin|Blue1_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, Red2_Pin|Yellow2_Pin|Green2_Pin|Blue2_Pin, GPIO_PIN_SET);
 }
 
-void printString (const char* message)
-{
-    int i=0;
-    HAL_StatusTypeDef	st;
-
-    //Have to wait for the last transmission to go.
-    while(huart3.gState == HAL_UART_STATE_BUSY_TX){}
-
-	for (const char* p = message; *p; ++p) {
-    	cliBufferTX[i] =  *p;
-    	i++;
-    }
-	st = HAL_UART_Transmit_IT(&huart3, cliBufferTX, i);
-	if (st != HAL_OK)
-	{
-		Error_Handler();
-	}
-
-}
-
+/**
+  * @brief Displays user's input to the CLI
+  * @param message: pointer to user's message
+  * @retval None
+  */
 void printStringBlocking (const char* message)
 {
     int i=0;
@@ -408,12 +457,13 @@ void printStringBlocking (const char* message)
 	{
 		Error_Handler();
 	}
-
 }
 
-/*
- * Send a byte
- */
+/**
+  * @brief Send a byte/char to the CLI
+  * @param msgChar: user's char input
+  * @retval None
+  */
 void sendByte (char msgChar)
 {
     while(huart3.gState == HAL_UART_STATE_BUSY_TX){}
@@ -421,15 +471,135 @@ void sendByte (char msgChar)
 
 }
 
-void handleCommand(char command[]){
-	uint8_t toggle[] = "toggle\r";
-	uint8_t help[] = "help\r";
-	uint8_t state[] = "state\r";
+/**
+  * @brief Handles the user's command
+  * @param user_input: User's input after pressing enter
+  * @retval uint16_t: this will be passed to a queue to be processed by another task
+  */
+uint16_t handleCommand(const char * user_input){
+	char help[] = "help";
+	char mode[] = "mode";
+	char scm[] = "scm";
+	char fsm[] = "fsm";
+	char atm[] = "atm";	//accelerated test mode
 
-	if  (strcmp((char *) command, (char *) toggle) == 0) {
-		printStringBlocking("\r\nToggle light\r\n");
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);	//turns on the light
+	char split_command[MAX_USER_INPUT];
+	char full_command[MAX_USER_INPUT];
+	uint16_t atm_period;
+	bool error = false;
+
+	for (int i = 0; i < MAX_USER_INPUT; ++i) {	//reset the char arrays
+		split_command[i] = 0;
+		full_command[i] = 0;
 	}
+
+	int i = 0;
+	for (const char* p = user_input; *p; ++p) {	//assign user input to a char array
+		full_command[i] = *p;
+    	i++;
+    }
+
+	char* space = user_input;
+	while (*space == ' ') {	//ignore leading whitespace
+		space++;
+	}
+	user_input = space;
+
+	i = 0;
+	for (const char* p = user_input; *p; ++p) {	//takes the first parameter of user's input
+		if ((strcmp(split_command, mode) == 0) || (strcmp(split_command, atm) == 0)){
+			if (*p == ' ' || *p == '\r'){
+				user_input = p+1;
+				break;
+			}
+		}
+		else {
+			if (*p == ' ' || *p == '\r'){
+				break;
+			}
+		}
+
+		split_command[i] = *p;	//the rest of user's input
+    	i++;
+    }
+
+	if (strcmp(split_command, help) == 0) {
+		printStringBlocking("\r\nHelpful commands: \r\n");
+		printStringBlocking("help:");
+		printStringBlocking("\t\tdisplay a list of valid commands\r\n");
+
+		printStringBlocking("mode fsm:");
+		printStringBlocking("\tswitch to Failsafe mode\r\n");
+
+		printStringBlocking("mode scm:");
+		printStringBlocking("\tswitch to Static Cycle mode\r\n");
+
+		printStringBlocking("atm x:");
+		printStringBlocking("\t\tenter accelerated test mode with ");
+		printStringBlocking("multiplication factor x (1-100)\r\n");
+	}
+	else if(strcmp(split_command, mode) == 0) {
+		for (int i = 0; i < MAX_USER_INPUT; ++i) {	//reset input
+			split_command[i] = 0;
+		}
+
+		i = 0;
+		for (const char* p = user_input; *p; ++p) {
+			if (*p == ' ' || *p == '\r'){
+				user_input = p++;
+				break;
+			}
+
+			split_command[i] =  *p;	//assign the second param of user input
+			i++;
+		}
+		if(strcmp(fsm, split_command) == 0) {
+			return FSM_MODE;
+		}
+		else if(strcmp(scm, split_command) == 0) {
+			return SCM_MODE;
+		}
+		else {
+			error = true;
+		}
+	}
+	else if(strcmp(split_command, atm) == 0) {
+		for (int i = 0; i < MAX_USER_INPUT; ++i) {
+			split_command[i] = 0;
+		}
+
+		i = 0;
+		for (const char* p = user_input; *p; ++p) {
+			if (*p == ' ' || *p == '\r'){
+				user_input = p++;
+				break;
+			}
+
+			split_command[i] =  *p;
+			i++;
+		}
+
+		atm_period = atoi(split_command);
+		if (atm_period > 0 && atm_period <= 100) {
+			return atm_period;
+		}
+		else {
+			error = true;
+		}
+	}
+	else if (split_command[0] = '\r'){	//if user presses enter with nothing else typed
+		//do nothing
+	}
+	else {
+		error = true;
+	}
+
+
+	if (error) {	//error check
+		printStringBlocking("\r\nInvalid command");
+	}
+
+	return 0;
 }
 
 
@@ -448,8 +618,8 @@ void State_Controller_Task(void *argument)
   uint16_t cliMessage;
   uint16_t statusMessage;
   osStatus_t status;
-  uint16_t state = SCM_MODE;
-  uint16_t period = 10;
+  uint16_t state = FSM_MODE;
+  uint16_t period = DEFAULT_PERIOD;
 
   //Send a status message straight away
   statusMessage = state;
@@ -460,21 +630,21 @@ void State_Controller_Task(void *argument)
   /* Infinite loop */
   for(;;)
   {
-
+	  int count = 0;
 	//check for messages but do not block.
 	status = osMessageQueueGet(CLI_QueueHandle, &cliMessage, NULL, 0U );
 	if(status == osOK)
 	{
 		//This means a message has been received
-		if (cliMessage <= ATM) {
+		if (cliMessage <= ATM) {	//the message received is a period
 			period = cliMessage;
 		}
 
-		if (cliMessage == FSM_MODE || cliMessage == FSM_MODE){
+		if (cliMessage == FSM_MODE || cliMessage == SCM_MODE){//the message received is for the mode
 			state = cliMessage;
 		}
 
-		statusMessage = cliMessage;
+		statusMessage = period + state;	//adds these to be passed on to the queue
 
 		if(osMessageQueuePut(Status_QueueHandle, &statusMessage, 1U, 0U)!= osOK)
 	    {
@@ -484,12 +654,12 @@ void State_Controller_Task(void *argument)
 	}
 
 	if (state == FSM_MODE){
-		HAL_GPIO_TogglePin(GPIOA, Red1_Pin);
-		HAL_GPIO_TogglePin(GPIOB, Red2_Pin);
-		osDelay(FSM_ON * period);
-		HAL_GPIO_TogglePin(GPIOA, Red1_Pin);
-		HAL_GPIO_TogglePin(GPIOB, Red2_Pin);
-		osDelay(FSM_OFF * period);
+		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_RESET);
+		osDelay(FSM_ON / period);
+		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_SET);
+		osDelay(FSM_OFF / period);
 	}
 	else if (state == SCM_MODE){	//reset is on set is off
 		turnOffAllLights();
@@ -499,8 +669,23 @@ void State_Controller_Task(void *argument)
 
 		HAL_GPIO_WritePin(GPIOA, Red1_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOA, Green1_Pin, GPIO_PIN_RESET);
-		osDelay(PRI_GREEN_TIME / period);
+		HAL_GPIO_WritePin(GPIOA, Blue1_Pin, GPIO_PIN_RESET);
+		osDelay(PRI_WALK_TIME / period);
 
+
+		HAL_TIM_Base_Start(&htim2);	//tim2 starts counting
+		timer = __HAL_TIM_GET_COUNTER(&htim2);	//gets the counter value
+		while(count < (PRI_WALK_WARN_TIME / period)) {
+			if (__HAL_TIM_GET_COUNTER(&htim2) - timer >= (1000/ period)){
+				count += 1000/period;
+			}
+			HAL_GPIO_TogglePin(GPIOA, Blue1_Pin);
+			timer = __HAL_TIM_GET_COUNTER(&htim2);
+			osDelay(WALK_BLINK_TIME/period);
+		}
+
+
+		HAL_GPIO_WritePin(GPIOA, Blue1_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOA, Green1_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOA, Yellow1_Pin, GPIO_PIN_RESET);
 		osDelay(PRI_YELLOW_TIME / period);
@@ -513,8 +698,24 @@ void State_Controller_Task(void *argument)
 		//secondary
 		HAL_GPIO_WritePin(GPIOB, Red2_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOB, Green2_Pin, GPIO_PIN_RESET);
-		osDelay(SEC_GREEN_TIME / period);
+		HAL_GPIO_WritePin(GPIOB, Blue2_Pin, GPIO_PIN_RESET);
+		osDelay(SEC_WALK_TIME / period);
 
+
+		count = 0;
+		HAL_TIM_Base_Start(&htim2);	//tim2 starts counting
+		timer = __HAL_TIM_GET_COUNTER(&htim2);	//gets the counter value
+		while(count < (SEC_WALK_WARN_TIME / period)) {
+			if (__HAL_TIM_GET_COUNTER(&htim2) - timer >= (1000 / period)){
+				count += 1000/period;
+			}
+			HAL_GPIO_TogglePin(GPIOB, Blue2_Pin);
+			timer = __HAL_TIM_GET_COUNTER(&htim2);
+			osDelay(WALK_BLINK_TIME/period);
+		}
+
+
+		HAL_GPIO_WritePin(GPIOB, Blue2_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOB, Green2_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOB, Yellow2_Pin, GPIO_PIN_RESET);
 		osDelay(SEC_YELLOW_TIME / period);
@@ -549,7 +750,7 @@ void CLI_Task(void *argument)
 
 			if(isCompleteLine)
 			{
-				handleCommand(cliBufferRX); //Empty for now.
+				cliMessage = handleCommand(cliBufferRX);
 
 				//Assume that things are fine :)
 				printStringBlocking("\r\n");
@@ -557,10 +758,11 @@ void CLI_Task(void *argument)
 
 				//Send a message to the controller.
 
-				//cliMessage -=100;
-				if(osMessageQueuePut(CLI_QueueHandle, &cliMessage, 1U, 0U)!= osOK)
-				{
-				  Error_Handler();
+				if (cliMessage > 0){
+					if(osMessageQueuePut(CLI_QueueHandle, &cliMessage, 1U, 0U)!= osOK)
+					{
+					  Error_Handler();
+					}
 				}
 			}
 		}
@@ -582,8 +784,10 @@ void Status_Update_Task(void *argument)
   /* USER CODE BEGIN Status_Update_Task */
 
 	uint16_t statusMessage;
-	uint16_t period;
+	uint16_t period = 1;
 	osStatus_t status;
+	static char outstring[50];
+	uint8_t mode[10];
 
 	/* Infinite loop */
 	for(;;)
@@ -591,19 +795,27 @@ void Status_Update_Task(void *argument)
 		status = osMessageQueueGet(Status_QueueHandle, &statusMessage, NULL, 0U );
 		if(status == osOK)
 		{
-
-			period = statusMessage;
+			if (statusMessage > SCM_MODE) {
+				uint8_t state[] = "SCM Mode";
+				strcpy(mode, state);
+				period = statusMessage - SCM_MODE;
+			}
+			else if (statusMessage > FSM_MODE && statusMessage < SCM_MODE){
+				uint8_t state[] = "FSM Mode";
+				strcpy(mode, state);
+				period = statusMessage - FSM_MODE;
+			}
+			else {	//startup
+				uint8_t state[] = "FSM Mode";
+				strcpy(mode, state);
+				period = 1;
+			}
 		}
-		//For some damn reason it locks if I send this twice in a row.
-		//	static const int32_t STR_SIZE = 96;
-		static char outstring[50];
 
 		printStringBlocking(SAVE_CURSOR);
 		printStringBlocking("\x1b[1;1H");
-		//printStringBlocking(GOTO_RC(1,1));
 
-		//GOTO_RC(1,1);
-		snprintf(outstring, 50,"period:% 5d \r\n",period);
+		snprintf(outstring, 50,"Mode: %s \t Speed: x%i ", mode, period);
 		printStringBlocking(outstring);
 		printStringBlocking(RESTORE_CURSOR);
 
