@@ -11,7 +11,7 @@ _mode scm_: switch to Static Cycle mode
 _atm x_: enter accelerated test mode with multiplication factor x (1-100)  
 
 ## Tasks (high to low priority)
-_State_Controller_Task_: controls the state of the LEDs and their period
+_State_Controller_Task_: controls the state of the LEDs and their period  
 _CLI_Task_: handles the CLI and builds the user command  
 _Status_Update_Task_: displays the status of the system to the CLI
 
