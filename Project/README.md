@@ -17,4 +17,4 @@ _Status_Update_Task_: displays the status of the system to the CLI
 
 ### Queues
 _CLI_Queue_: used for _CLI_Task_ and _State_Controller_Task_ communication  
-_Status_Queue _: used for _Status_Update_Task_ and _State_Controller_Task_ communication  
+_Status_Queue_: used for _Status_Update_Task_ and _State_Controller_Task_ communication  
