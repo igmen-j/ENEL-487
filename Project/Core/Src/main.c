@@ -514,7 +514,7 @@ uint16_t handleCommand(const char * user_input){
 			}
 		}
 		else {
-			if (*p == ' ' || *p == '\r'){
+			if (*p == ' ' || *p == '\r'){	//break the loop if space or enter is found
 				break;
 			}
 		}
@@ -587,7 +587,7 @@ uint16_t handleCommand(const char * user_input){
 			error = true;
 		}
 	}
-	else if (split_command[0] = '\r'){	//if user presses enter with nothing else typed
+	else if (split_command[0] == '\0'){	//if user presses enter with nothing else typed
 		//do nothing
 	}
 	else {
