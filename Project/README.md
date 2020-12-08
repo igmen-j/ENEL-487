@@ -18,3 +18,8 @@ _Status_Update_Task_: displays the status of the system to the CLI
 ### Queues
 _CLI_Queue_: used for _CLI_Task_ and _State_Controller_Task_ communication  
 _Status_Queue_: used for _Status_Update_Task_ and _State_Controller_Task_ communication  
+
+## Issues/Limitations
+- One full cycle of the lights has to run before the mode switches (blocking)  
+  - This is noticeable when switching from SCM to FSM modes&mdash;especially at x1 speed  
+- Gets a Hard Fault when user enters characters over the limit to transmit (max input: 50)
